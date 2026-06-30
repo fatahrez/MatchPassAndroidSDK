@@ -39,4 +39,6 @@ internal data class PassDto(
 internal data class ValidatePassDto(
     @SerializedName("valid") val isValid: Boolean = false,
     val status: String = "",
+    @SerializedName("expires_at") val expiresAt: String = "",
+    val reason: String? = null,
 )
