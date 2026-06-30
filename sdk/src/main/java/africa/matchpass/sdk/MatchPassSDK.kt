@@ -58,7 +58,7 @@ object MatchPassSDK {
     internal lateinit var client: MatchPassClient
         private set
 
-    private var initialised = false
+    @Volatile private var initialised = false
 
     // ── Initialisation ──────────────────────────────────────────────────────
 
@@ -94,6 +94,7 @@ object MatchPassSDK {
      * Prefer [Builder] for discoverable configuration.
      */
     @JvmStatic
+    @Synchronized
     fun init(context: Context, config: MatchPassConfig) {
         if (initialised) return
         this.config = config
@@ -174,6 +175,17 @@ object MatchPassSDK {
     fun getStoredPhone(context: Context): String? {
         checkInitialised()
         return MatchPassStore(context).getPhone().ifBlank { null }
+    }
+
+    /**
+     * Clears the stored phone number, ending the verified session on this device.
+     *
+     * Does NOT clear purchased passes — the user can recover them via the pass-restore
+     * lookup next time they log in on this device. Call this from your "Sign Out" action.
+     */
+    fun signOut(context: Context) {
+        checkInitialised()
+        MatchPassStore(context).clearPhone()
     }
 
     /**

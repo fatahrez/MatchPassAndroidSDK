@@ -39,4 +39,7 @@ internal class MatchPassStore(private val prefs: SharedPreferences) {
 
     fun getPhone(): String =
         prefs.getString("last_phone", "") ?: ""
+
+    fun clearPhone() =
+        prefs.edit().remove("last_phone").apply()
 }

@@ -8,6 +8,7 @@ import africa.matchpass.sdk.MatchPassGrant
 import retrofit2.HttpException
 import java.io.IOException
 import java.text.SimpleDateFormat
+import java.util.Date
 import java.util.Locale
 import java.util.TimeZone
 
@@ -41,8 +42,9 @@ internal class AccessChecker(
         val cacheTtlMs = content.policy.cacheTtlSeconds * 1_000L
         val lastValidated = store.getValidationTime(content.id)
         if (lastValidated > 0L && System.currentTimeMillis() - lastValidated < cacheTtlMs) {
+            val expiresAtStr = if (storedExpiry > 0L) epochMillisToIso8601(storedExpiry) else ""
             return AccessResult.Granted(
-                MatchPassGrant(token = token, contentId = content.id, expiresAt = "")
+                MatchPassGrant(token = token, contentId = content.id, expiresAt = expiresAtStr)
             )
         }
 
@@ -73,6 +75,11 @@ internal class AccessChecker(
          * Parses an ISO 8601 UTC string from DRF into epoch millis.
          * Handles microseconds ("2024-12-15T21:00:00.123456Z") by truncating to 3 decimal places.
          */
+        internal fun epochMillisToIso8601(epochMillis: Long): String =
+            SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.US)
+                .also { it.timeZone = TimeZone.getTimeZone("UTC") }
+                .format(Date(epochMillis))
+
         internal fun parseIso8601ToMillis(dateStr: String): Long? {
             if (dateStr.isBlank()) return null
             // DRF emits microseconds (6 digits after dot). SimpleDateFormat only handles millis (3).

@@ -115,7 +115,10 @@ fun StreamingHomeScreen() {
                 HomeContent(
                     // "" means guest — pass null so paywall shows OTP
                     loggedInPhone = sessionPhone!!.ifBlank { null },
-                    onSignOut     = { sessionPhone = null },
+                    onSignOut     = {
+                        MatchPassSDK.signOut(context)
+                        sessionPhone = null
+                    },
                 )
             }
         }

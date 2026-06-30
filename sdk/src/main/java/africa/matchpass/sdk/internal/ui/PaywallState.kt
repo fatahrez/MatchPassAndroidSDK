@@ -19,5 +19,6 @@ internal data class PaywallState(
     val otpCode: String = "",
     val demoOtp: String? = null,
     val error: String? = null,
+    val isLoading: Boolean = false,
     val issuedGrant: MatchPassGrant? = null,
 )

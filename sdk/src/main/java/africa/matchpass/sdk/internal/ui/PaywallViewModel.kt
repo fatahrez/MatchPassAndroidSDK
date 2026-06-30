@@ -130,11 +130,15 @@ internal class PaywallViewModel(
         val phone = _state.value.phoneNumber.trim().ifBlank { return }
         store.savePhone(phone)
         viewModelScope.launch {
-            _state.update { it.copy(step = PaywallStep.AwaitingOtp, error = null) }
+            _state.update { it.copy(error = null, isLoading = true) }
             runCatching { client.service.requestOtp(body = OtpRequestDto(phone)) }
-                .onSuccess { res -> _state.update { it.copy(demoOtp = res.otp.ifBlank { null }) } }
+                .onSuccess { res ->
+                    _state.update {
+                        it.copy(step = PaywallStep.AwaitingOtp, isLoading = false, demoOtp = res.otp.ifBlank { null })
+                    }
+                }
                 .onFailure { e ->
-                    _state.update { it.copy(step = PaywallStep.EnteringPhone, error = e.message) }
+                    _state.update { it.copy(isLoading = false, error = e.message) }
                 }
         }
     }
@@ -180,11 +184,13 @@ internal class PaywallViewModel(
             _state.update { it.copy(step = PaywallStep.Polling) }
             repeat(5) { attempt ->
                 delay(700)
-                val valid = runCatching {
-                    client.service.validatePass("ApiKey ${config.apiKey}", passDto.token).isValid
-                }.getOrDefault(false)
-                if (valid || attempt == 4) {
+                val validateDto = runCatching {
+                    client.service.validatePass("ApiKey ${config.apiKey}", passDto.token)
+                }.getOrNull()
+                if (validateDto?.isValid == true || attempt == 4) {
                     store.saveValidationTime(content.id, System.currentTimeMillis())
+                    validateDto?.expiresAt?.let { AccessChecker.parseIso8601ToMillis(it) }
+                        ?.let { store.saveExpiresAt(content.id, it) }
                     _state.update { it.copy(step = PaywallStep.AccessGranted, issuedGrant = passDto.toGrant()) }
                     return@launch
                 }
