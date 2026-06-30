@@ -5,6 +5,7 @@ import androidx.compose.runtime.Composable
 import africa.matchpass.sdk.internal.AccessChecker
 import africa.matchpass.sdk.internal.MatchPassClient
 import africa.matchpass.sdk.internal.MatchPassStore
+import africa.matchpass.sdk.internal.ui.LoginScreen
 import africa.matchpass.sdk.internal.ui.PaywallScreen
 
 /**
@@ -127,6 +128,39 @@ object MatchPassSDK {
             onAccessGranted = onAccessGranted,
             onDismiss = onDismiss,
             userPhone = userPhone,
+        )
+    }
+
+    // ── Login composable ─────────────────────────────────────────────────────
+
+    /**
+     * Drop-in login composable. Full-screen OTP phone verification — skippable.
+     *
+     * **When to use:**
+     * - On first app launch (user hasn't identified themselves yet).
+     * - From a "Sign In" button in your app's top bar.
+     * - If your app has no existing auth and you want MatchPass to handle identity.
+     *
+     * **When NOT to use:**
+     * - If the host app already has an authenticated user (DStv account, Canal+ ID).
+     *   Instead pass `userPhone = account.msisdn` to [Paywall] — OTP is skipped entirely.
+     *
+     * Once verified, the phone is persisted to local storage.
+     * All subsequent [Paywall] calls will skip OTP automatically.
+     *
+     * @param onLoggedIn Called with the verified phone number after successful OTP.
+     * @param onSkip     Called when the user dismisses without signing in.
+     */
+    @Composable
+    fun Login(
+        onLoggedIn: (phone: String) -> Unit,
+        onSkip: () -> Unit,
+    ) {
+        checkInitialised()
+        LoginScreen(
+            client = client,
+            onLoggedIn = onLoggedIn,
+            onSkip = onSkip,
         )
     }
 

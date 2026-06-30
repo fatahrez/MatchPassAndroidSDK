@@ -26,14 +26,16 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -75,9 +77,14 @@ private val Scrim    = Color(0x99000000)
 @Composable
 fun StreamingHomeScreen() {
     val context = LocalContext.current
+
+    // null = guest (not signed in); non-null = verified phone number
+    var loggedInPhone by remember { mutableStateOf<String?>(null) }
+
     val accessState = remember { mutableStateMapOf<String, Boolean>() }
-    // Separate states: paywallContent shows the SDK paywall; nowPlayingContent shows mock player
-    var paywallContent by remember { mutableStateOf<SampleContent?>(null) }
+
+    var showLogin         by remember { mutableStateOf(false) }
+    var paywallContent    by remember { mutableStateOf<SampleContent?>(null) }
     var nowPlayingContent by remember { mutableStateOf<SampleContent?>(null) }
 
     LaunchedEffect(Unit) {
@@ -87,8 +94,7 @@ fun StreamingHomeScreen() {
         }
     }
 
-    // Gate clicks: if the user already has a pass, go straight to "Now Playing".
-    // If not, open the MatchPass paywall for purchase.
+    // Gate clicks: owned → mock player; unowned → paywall
     val onContentClick: (SampleContent) -> Unit = { item ->
         if (accessState[item.passContent.id] == true) {
             nowPlayingContent = item
@@ -98,12 +104,17 @@ fun StreamingHomeScreen() {
     }
 
     Box(modifier = Modifier.fillMaxSize().background(BgDark)) {
-        // ── Home screen ───────────────────────────────────────────────────────
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
             contentPadding = PaddingValues(bottom = 40.dp),
         ) {
-            item { TopBar() }
+            item {
+                TopBar(
+                    loggedInPhone = loggedInPhone,
+                    onSignIn = { showLogin = true },
+                    onSignOut = { loggedInPhone = null },
+                )
+            }
 
             item {
                 FeaturedHero(
@@ -164,25 +175,37 @@ fun StreamingHomeScreen() {
             }
         }
 
-        // ── MatchPass paywall (purchase flow) ─────────────────────────────────
+        // ── MatchPass Login (skippable, full-screen) ───────────────────────────
+        if (showLogin) {
+            MatchPassSDK.Login(
+                onLoggedIn = { phone ->
+                    loggedInPhone = phone
+                    showLogin = false
+                },
+                onSkip = { showLogin = false },
+            )
+        }
+
+        // ── MatchPass Paywall ──────────────────────────────────────────────────
+        // Pass loggedInPhone → if not null the paywall skips the OTP step.
         if (paywallContent != null) {
             val item = paywallContent!!
             MatchPassSDK.Paywall(
                 content = item.passContent,
+                userPhone = loggedInPhone,
                 onAccessGranted = { _ ->
                     accessState[item.passContent.id] = true
                     paywallContent = null
-                    nowPlayingContent = item    // go straight to player on purchase
+                    nowPlayingContent = item
                 },
                 onDismiss = { paywallContent = null },
             )
         }
 
-        // ── Mock "Now Playing" screen (user already has a pass) ───────────────
+        // ── Now Playing (mock player) ──────────────────────────────────────────
         if (nowPlayingContent != null) {
-            val item = nowPlayingContent!!
             NowPlayingScreen(
-                content = item,
+                content = nowPlayingContent!!,
                 onBack = { nowPlayingContent = null },
             )
         }
@@ -198,7 +221,6 @@ private fun NowPlayingScreen(content: SampleContent, onBack: () -> Unit) {
             .fillMaxSize()
             .background(Brush.verticalGradient(listOf(content.bgStart, Color(0xFF000000)))),
     ) {
-        // Large emoji as video placeholder
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Text(content.emoji, fontSize = 80.sp)
@@ -210,20 +232,10 @@ private fun NowPlayingScreen(content: SampleContent, onBack: () -> Unit) {
                         .background(Color(0x33FFFFFF)),
                     contentAlignment = Alignment.Center,
                 ) {
-                    Icon(
-                        Icons.Default.PlayArrow,
-                        contentDescription = "Playing",
-                        tint = Color.White,
-                        modifier = Modifier.size(40.dp),
-                    )
+                    Icon(Icons.Default.PlayArrow, contentDescription = "Playing", tint = Color.White, modifier = Modifier.size(40.dp))
                 }
                 Spacer(Modifier.height(20.dp))
-                Text(
-                    text = content.passContent.title,
-                    color = Color.White,
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.Bold,
-                )
+                Text(text = content.passContent.title, color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
                 Spacer(Modifier.height(4.dp))
                 Text(text = content.subtitle, color = Color(0xAAffffff), fontSize = 13.sp)
                 Spacer(Modifier.height(12.dp))
@@ -241,22 +253,23 @@ private fun NowPlayingScreen(content: SampleContent, onBack: () -> Unit) {
             }
         }
 
-        // Back button
         IconButton(
             onClick = onBack,
-            modifier = Modifier
-                .statusBarsPadding()
-                .padding(8.dp),
+            modifier = Modifier.statusBarsPadding().padding(8.dp),
         ) {
-            Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = Color.White)
+            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = Color.White)
         }
     }
 }
 
-// ── Home screen components ────────────────────────────────────────────────────
+// ── Top bar ────────────────────────────────────────────────────────────────────
 
 @Composable
-private fun TopBar() {
+private fun TopBar(
+    loggedInPhone: String?,
+    onSignIn: () -> Unit,
+    onSignOut: () -> Unit,
+) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -267,10 +280,7 @@ private fun TopBar() {
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Box(
-                modifier = Modifier
-                    .size(32.dp)
-                    .clip(RoundedCornerShape(4.dp))
-                    .background(DstvBlue),
+                modifier = Modifier.size(32.dp).clip(RoundedCornerShape(4.dp)).background(DstvBlue),
                 contentAlignment = Alignment.Center,
             ) {
                 Text("D", color = Color.White, fontWeight = FontWeight.Black, fontSize = 16.sp)
@@ -278,53 +288,50 @@ private fun TopBar() {
             Spacer(Modifier.width(6.dp))
             Text("Stv Stream", color = TextMain, fontWeight = FontWeight.Bold, fontSize = 20.sp)
         }
-        Box(
-            modifier = Modifier
-                .size(36.dp)
-                .clip(CircleShape)
-                .background(Surface),
-            contentAlignment = Alignment.Center,
-        ) {
-            Text("M", color = DstvBlue, fontWeight = FontWeight.Black, fontSize = 14.sp)
+
+        if (loggedInPhone != null) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                TextButton(onClick = onSignOut) {
+                    Text("···${loggedInPhone.takeLast(4)}", color = TextSub, fontSize = 12.sp)
+                }
+                Box(
+                    modifier = Modifier.size(32.dp).clip(CircleShape).background(DstvBlue),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(Icons.Default.Person, contentDescription = null, tint = Color.White, modifier = Modifier.size(18.dp))
+                }
+            }
+        } else {
+            Button(
+                onClick = onSignIn,
+                shape = RoundedCornerShape(6.dp),
+                contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = DstvBlue),
+            ) {
+                Text("Sign In", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+            }
         }
     }
 }
 
+// ── Content cards ──────────────────────────────────────────────────────────────
+
 @Composable
-private fun FeaturedHero(
-    content: SampleContent,
-    hasAccess: Boolean,
-    onClick: (SampleContent) -> Unit,
-) {
+private fun FeaturedHero(content: SampleContent, hasAccess: Boolean, onClick: (SampleContent) -> Unit) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .height(240.dp)
             .clickable { onClick(content) },
     ) {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(Brush.linearGradient(listOf(content.bgStart, content.bgEnd))),
-        )
+        Box(modifier = Modifier.fillMaxSize().background(Brush.linearGradient(listOf(content.bgStart, content.bgEnd))))
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             Text(content.emoji, fontSize = 80.sp, modifier = Modifier.padding(bottom = 40.dp))
         }
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(Brush.verticalGradient(listOf(Color.Transparent, Color(0xCC000000)))),
-        )
+        Box(modifier = Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color.Transparent, Color(0xCC000000)))))
         Column(modifier = Modifier.align(Alignment.BottomStart).padding(20.dp)) {
             if (content.isLive) { LiveBadge(); Spacer(Modifier.height(6.dp)) }
-            Text(
-                text = content.passContent.title,
-                color = TextMain,
-                fontSize = 22.sp,
-                fontWeight = FontWeight.Black,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-            )
+            Text(text = content.passContent.title, color = TextMain, fontSize = 22.sp, fontWeight = FontWeight.Black, maxLines = 2, overflow = TextOverflow.Ellipsis)
             Text(text = content.subtitle, color = TextSub, fontSize = 13.sp)
             Spacer(Modifier.height(12.dp))
             Button(
@@ -340,11 +347,7 @@ private fun FeaturedHero(
                 } else {
                     Icon(Icons.Default.Lock, contentDescription = null, modifier = Modifier.size(14.dp))
                     Spacer(Modifier.width(4.dp))
-                    Text(
-                        "${content.passContent.currency} ${content.passContent.price} · Get Pass",
-                        fontWeight = FontWeight.Black,
-                        fontSize = 13.sp,
-                    )
+                    Text("${content.passContent.currency} ${content.passContent.price} · Get Pass", fontWeight = FontWeight.Black, fontSize = 13.sp)
                 }
             }
         }
@@ -352,11 +355,7 @@ private fun FeaturedHero(
 }
 
 @Composable
-private fun SportCard(
-    content: SampleContent,
-    hasAccess: Boolean,
-    onClick: (SampleContent) -> Unit,
-) {
+private fun SportCard(content: SampleContent, hasAccess: Boolean, onClick: (SampleContent) -> Unit) {
     Box(
         modifier = Modifier
             .width(160.dp)
@@ -368,23 +367,10 @@ private fun SportCard(
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             Text(content.emoji, fontSize = 40.sp, modifier = Modifier.padding(bottom = 32.dp))
         }
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(Brush.verticalGradient(listOf(Color.Transparent, Color(0xDD000000)))),
-        )
-        if (content.isLive) {
-            Box(modifier = Modifier.padding(8.dp)) { LiveBadge() }
-        }
+        Box(modifier = Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color.Transparent, Color(0xDD000000)))))
+        if (content.isLive) { Box(modifier = Modifier.padding(8.dp)) { LiveBadge() } }
         Column(modifier = Modifier.align(Alignment.BottomStart).padding(10.dp)) {
-            Text(
-                text = content.passContent.title,
-                color = TextMain,
-                fontSize = 12.sp,
-                fontWeight = FontWeight.Bold,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-            )
+            Text(text = content.passContent.title, color = TextMain, fontSize = 12.sp, fontWeight = FontWeight.Bold, maxLines = 2, overflow = TextOverflow.Ellipsis)
             Spacer(Modifier.height(4.dp))
             if (hasAccess) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -400,11 +386,7 @@ private fun SportCard(
 }
 
 @Composable
-private fun WideCard(
-    content: SampleContent,
-    hasAccess: Boolean,
-    onClick: (SampleContent) -> Unit,
-) {
+private fun WideCard(content: SampleContent, hasAccess: Boolean, onClick: (SampleContent) -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -415,35 +397,19 @@ private fun WideCard(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Box(
-            modifier = Modifier
-                .width(90.dp)
-                .fillMaxSize()
-                .background(Brush.linearGradient(listOf(content.bgStart, content.bgEnd))),
+            modifier = Modifier.width(90.dp).fillMaxSize().background(Brush.linearGradient(listOf(content.bgStart, content.bgEnd))),
             contentAlignment = Alignment.Center,
         ) {
             Text(content.emoji, fontSize = 28.sp)
         }
         Column(modifier = Modifier.weight(1f).padding(horizontal = 14.dp)) {
-            Text(
-                text = content.passContent.title,
-                color = TextMain,
-                fontSize = 14.sp,
-                fontWeight = FontWeight.SemiBold,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
+            Text(text = content.passContent.title, color = TextMain, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
             Spacer(Modifier.height(2.dp))
             Text(text = content.subtitle, color = TextSub, fontSize = 11.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
         }
         Box(modifier = Modifier.padding(end = 14.dp)) {
             if (hasAccess) {
-                Box(
-                    modifier = Modifier
-                        .size(32.dp)
-                        .clip(CircleShape)
-                        .background(DstvBlue),
-                    contentAlignment = Alignment.Center,
-                ) {
+                Box(modifier = Modifier.size(32.dp).clip(CircleShape).background(DstvBlue), contentAlignment = Alignment.Center) {
                     Icon(Icons.Default.PlayArrow, contentDescription = "Watch", tint = Color.White, modifier = Modifier.size(18.dp))
                 }
             } else {
@@ -453,25 +419,17 @@ private fun WideCard(
     }
 }
 
+// ── Small components ───────────────────────────────────────────────────────────
+
 @Composable
 private fun SectionHeader(title: String) {
-    Text(
-        text = title,
-        color = TextMain,
-        fontSize = 18.sp,
-        fontWeight = FontWeight.Bold,
-        modifier = Modifier.padding(start = 16.dp, top = 24.dp, bottom = 12.dp, end = 16.dp),
-    )
+    Text(text = title, color = TextMain, fontSize = 18.sp, fontWeight = FontWeight.Bold,
+        modifier = Modifier.padding(start = 16.dp, top = 24.dp, bottom = 12.dp, end = 16.dp))
 }
 
 @Composable
 private fun LiveBadge() {
-    Box(
-        modifier = Modifier
-            .clip(RoundedCornerShape(4.dp))
-            .background(LiveRed)
-            .padding(horizontal = 6.dp, vertical = 2.dp),
-    ) {
+    Box(modifier = Modifier.clip(RoundedCornerShape(4.dp)).background(LiveRed).padding(horizontal = 6.dp, vertical = 2.dp)) {
         Text("● LIVE", color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Black, letterSpacing = 0.5.sp)
     }
 }
@@ -479,10 +437,7 @@ private fun LiveBadge() {
 @Composable
 private fun PriceBadge(currency: String, price: String) {
     Row(
-        modifier = Modifier
-            .clip(RoundedCornerShape(4.dp))
-            .background(Scrim)
-            .padding(horizontal = 6.dp, vertical = 3.dp),
+        modifier = Modifier.clip(RoundedCornerShape(4.dp)).background(Scrim).padding(horizontal = 6.dp, vertical = 3.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(3.dp),
     ) {
