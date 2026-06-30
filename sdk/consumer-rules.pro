@@ -1,0 +1,4 @@
+-keep class africa.matchpass.sdk.MatchPassSDK { *; }
+-keep class africa.matchpass.sdk.MatchPassConfig { *; }
+-keep class africa.matchpass.sdk.MatchPassContent { *; }
+-keep class africa.matchpass.sdk.MatchPassGrant { *; }
