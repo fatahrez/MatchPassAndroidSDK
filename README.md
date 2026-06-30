@@ -177,7 +177,7 @@ Describes the content the user is trying to access. Use your own IDs — MatchPa
 
 | Parameter | Type | Required | Default | Description |
 |-----------|------|----------|---------|-------------|
-| `id` | `String` | ✓ | — | Your content identifier (must match what you registered in the MatchPass dashboard) |
+| `id` | `String` | ✓ | — | Your content identifier — must match the `external_id` you registered in the MatchPass dashboard. A mismatch returns HTTP 400 `content_id: Content not found`. |
 | `title` | `String` | ✓ | — | Displayed on the paywall confirm screen |
 | `price` | `String` | ✓ | — | Amount as decimal string, e.g. `"29.00"` |
 | `currency` | `String` | | `"ZAR"` | ISO 4217 code |

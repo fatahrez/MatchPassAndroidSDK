@@ -22,8 +22,8 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
 
         val content = MatchPassContent(
-            id = "arsenal-vs-man-city",
-            title = "Arsenal vs Man City",
+            id = "epl-match-001",
+            title = "Arsenal vs Manchester City",
             price = "29.00",
             currency = "ZAR",
             durationHours = 4,
@@ -48,7 +48,7 @@ class MainActivity : ComponentActivity() {
             } else {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Button(onClick = { showPaywall = true }) {
-                        Text("Watch Arsenal vs Man City — ZAR 29.00")
+                        Text("Watch Arsenal vs Manchester City — ZAR 29.00")
                     }
                 }
             }
