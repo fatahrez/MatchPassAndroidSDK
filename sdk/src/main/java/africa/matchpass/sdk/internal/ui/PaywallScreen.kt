@@ -88,7 +88,7 @@ internal fun PaywallScreen(
             when (state.step) {
                 PaywallStep.Resuming          -> IssuingPanel("Checking your pass...")
                 PaywallStep.Issuing           -> IssuingPanel("Activating your pass...")
-                PaywallStep.Polling           -> IssuingPanel("Confirming access...")
+                PaywallStep.Polling           -> IssuingPanel("Confirming payment...")
                 PaywallStep.ProcessingPayment -> PaymentPanel(content = content, state = state)
                 PaywallStep.AccessGranted     -> AccessGrantedPanel(
                     content = content,

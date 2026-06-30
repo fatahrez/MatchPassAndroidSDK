@@ -34,6 +34,18 @@ internal interface MatchPassService {
      * Returns 404 if no valid pass exists — caller should catch [HttpException] with code 404
      * and proceed to the purchase flow.
      */
+    @POST("payments/initiate/")
+    suspend fun initiatePayment(
+        @Header("Authorization") auth: String,
+        @Body body: InitiatePaymentDto,
+    ): InitiatePaymentResponseDto
+
+    @GET("payments/status/{checkout_request_id}/")
+    suspend fun paymentStatus(
+        @Header("Authorization") auth: String,
+        @retrofit2.http.Path("checkout_request_id") checkoutRequestId: String,
+    ): PaymentStatusDto
+
     @GET("passes/lookup/")
     suspend fun lookupPass(
         @Header("Authorization") auth: String,

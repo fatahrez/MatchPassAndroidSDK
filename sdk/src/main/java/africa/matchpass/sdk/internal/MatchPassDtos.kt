@@ -36,6 +36,25 @@ internal data class PassDto(
     fun toGrant() = MatchPassGrant(token = token, contentId = contentId, expiresAt = expiresAt)
 }
 
+internal data class InitiatePaymentDto(
+    @SerializedName("phone")      val phone: String,
+    @SerializedName("content_id") val contentId: String,
+    @SerializedName("user_ref")   val userRef: String,
+    val amount: String,
+    val currency: String,
+)
+
+internal data class InitiatePaymentResponseDto(
+    @SerializedName("checkout_request_id") val checkoutRequestId: String = "",
+)
+
+internal data class PaymentStatusDto(
+    val status: String = "pending",
+    val token: String? = null,
+    @SerializedName("expires_at") val expiresAt: String? = null,
+    @SerializedName("result_desc") val resultDesc: String? = null,
+)
+
 internal data class LookupPassDto(
     val token: String = "",
     @SerializedName("content_id") val contentId: String = "",

@@ -9,7 +9,7 @@ import africa.matchpass.sdk.MatchPassConfig
 import africa.matchpass.sdk.MatchPassContent
 import africa.matchpass.sdk.MatchPassGrant
 import africa.matchpass.sdk.internal.AccessChecker
-import africa.matchpass.sdk.internal.IssuePassDto
+import africa.matchpass.sdk.internal.InitiatePaymentDto
 import africa.matchpass.sdk.internal.MatchPassClient
 import africa.matchpass.sdk.internal.MatchPassStore
 import africa.matchpass.sdk.internal.OtpRequestDto
@@ -155,46 +155,67 @@ internal class PaywallViewModel(
         }
     }
 
-    // ── Purchase ─────────────────────────────────────────────────────────────
+    // ── Purchase (M-Pesa STK Push) ────────────────────────────────────────────
 
     fun confirmAndPay() {
-        val s = _state.value
+        val phone = normalizePhone(_state.value.phoneNumber.trim())
         viewModelScope.launch {
+            // Step 1 — send STK Push to user's phone
             _state.update { it.copy(step = PaywallStep.ProcessingPayment, error = null) }
-            delay(2_600)
-
-            _state.update { it.copy(step = PaywallStep.Issuing) }
-            val passDto = runCatching {
-                client.service.issuePass(
+            val initDto = runCatching {
+                client.service.initiatePayment(
                     auth = "ApiKey ${config.apiKey}",
-                    body = IssuePassDto(
+                    body = InitiatePaymentDto(
+                        phone     = phone,
                         contentId = content.id,
-                        userRef = s.phoneNumber.trim(),
-                        amount = content.price,
-                        currency = content.currency,
+                        userRef   = _state.value.phoneNumber.trim(),
+                        amount    = content.price,
+                        currency  = content.currency,
                     ),
                 )
             }.getOrElse { e ->
-                _state.update { it.copy(step = PaywallStep.Confirming, error = e.message) }
+                _state.update { it.copy(step = PaywallStep.Confirming, error = "Could not send payment request: ${e.message}") }
                 return@launch
             }
 
-            store.savePass(content.id, passDto.token)
-
+            // Step 2 — poll for payment completion (30 × 3s = 90s timeout)
             _state.update { it.copy(step = PaywallStep.Polling) }
-            repeat(5) { attempt ->
-                delay(700)
-                val validateDto = runCatching {
-                    client.service.validatePass("ApiKey ${config.apiKey}", passDto.token)
-                }.getOrNull()
-                if (validateDto?.isValid == true || attempt == 4) {
-                    store.saveValidationTime(content.id, System.currentTimeMillis())
-                    validateDto?.expiresAt?.let { AccessChecker.parseIso8601ToMillis(it) }
-                        ?.let { store.saveExpiresAt(content.id, it) }
-                    _state.update { it.copy(step = PaywallStep.AccessGranted, issuedGrant = passDto.toGrant()) }
-                    return@launch
+            repeat(30) {
+                delay(3_000)
+                val statusDto = runCatching {
+                    client.service.paymentStatus("ApiKey ${config.apiKey}", initDto.checkoutRequestId)
+                }.getOrNull() ?: return@repeat
+
+                when (statusDto.status) {
+                    "completed" -> {
+                        val token = statusDto.token ?: return@repeat
+                        store.savePass(content.id, token)
+                        store.saveValidationTime(content.id, System.currentTimeMillis())
+                        statusDto.expiresAt?.let { AccessChecker.parseIso8601ToMillis(it) }
+                            ?.let { store.saveExpiresAt(content.id, it) }
+                        val grant = africa.matchpass.sdk.MatchPassGrant(token, content.id, statusDto.expiresAt ?: "")
+                        _state.update { it.copy(step = PaywallStep.AccessGranted, issuedGrant = grant) }
+                        return@launch
+                    }
+                    "failed", "cancelled", "timed_out" -> {
+                        _state.update { it.copy(step = PaywallStep.Confirming, error = statusDto.resultDesc ?: "Payment failed. Please try again.") }
+                        return@launch
+                    }
+                    // "pending" — keep polling
                 }
             }
+
+            // 90 seconds elapsed with no result
+            _state.update { it.copy(step = PaywallStep.Confirming, error = "Payment timed out. Please try again.") }
+        }
+    }
+
+    private fun normalizePhone(phone: String): String {
+        val digits = phone.filter { it.isDigit() }
+        return when {
+            digits.startsWith("254") -> digits
+            digits.startsWith("0")   -> "254${digits.substring(1)}"
+            else                     -> digits
         }
     }
 
