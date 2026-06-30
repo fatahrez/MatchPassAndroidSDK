@@ -32,6 +32,7 @@ import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
@@ -78,12 +79,57 @@ private val Scrim    = Color(0x99000000)
 fun StreamingHomeScreen() {
     val context = LocalContext.current
 
-    // null = guest (not signed in); non-null = verified phone number
-    var loggedInPhone by remember { mutableStateOf<String?>(null) }
+    // Session state:
+    //   null  = still checking stored phone (splash shown)
+    //   ""    = user explicitly skipped login (guest)
+    //   "..." = verified phone number
+    var sessionPhone by remember { mutableStateOf<String?>(null) }
+    var isChecking   by remember { mutableStateOf(true) }
 
+    // On first launch read any phone stored from a previous session.
+    // If found → skip login gate and go straight to home as logged-in user.
+    LaunchedEffect(Unit) {
+        sessionPhone = MatchPassSDK.getStoredPhone(context)  // null if never verified
+        isChecking = false
+    }
+
+    Box(modifier = Modifier.fillMaxSize().background(BgDark)) {
+        when {
+            // ── Brief splash while reading stored state ────────────────────────
+            isChecking -> {
+                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator(color = DstvBlue, strokeWidth = 3.dp)
+                }
+            }
+
+            // ── Login gate — shown on first launch until signed in or skipped ──
+            sessionPhone == null -> {
+                MatchPassSDK.Login(
+                    onLoggedIn = { phone -> sessionPhone = phone },
+                    onSkip     = { sessionPhone = "" },  // "" = guest
+                )
+            }
+
+            // ── Home screen ────────────────────────────────────────────────────
+            else -> {
+                HomeContent(
+                    // "" means guest — pass null so paywall shows OTP
+                    loggedInPhone = sessionPhone!!.ifBlank { null },
+                    onSignOut     = { sessionPhone = null },
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun HomeContent(
+    loggedInPhone: String?,
+    onSignOut: () -> Unit,
+) {
+    val context = LocalContext.current
     val accessState = remember { mutableStateMapOf<String, Boolean>() }
 
-    var showLogin         by remember { mutableStateOf(false) }
     var paywallContent    by remember { mutableStateOf<SampleContent?>(null) }
     var nowPlayingContent by remember { mutableStateOf<SampleContent?>(null) }
 
@@ -94,121 +140,102 @@ fun StreamingHomeScreen() {
         }
     }
 
-    // Gate clicks: owned → mock player; unowned → paywall
     val onContentClick: (SampleContent) -> Unit = { item ->
-        if (accessState[item.passContent.id] == true) {
-            nowPlayingContent = item
-        } else {
-            paywallContent = item
+        if (accessState[item.passContent.id] == true) nowPlayingContent = item
+        else paywallContent = item
+    }
+
+    LazyColumn(
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(bottom = 40.dp),
+    ) {
+        item {
+            TopBar(
+                loggedInPhone = loggedInPhone,
+                onSignOut = onSignOut,
+            )
+        }
+
+        item {
+            FeaturedHero(
+                content = LIVE_SPORT.first(),
+                hasAccess = accessState[LIVE_SPORT.first().passContent.id] == true,
+                onClick = onContentClick,
+            )
+        }
+
+        item {
+            SectionHeader("Live Sport")
+            LazyRow(
+                contentPadding = PaddingValues(horizontal = 16.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                items(LIVE_SPORT) { item ->
+                    SportCard(
+                        content = item,
+                        hasAccess = accessState[item.passContent.id] == true,
+                        onClick = onContentClick,
+                    )
+                }
+            }
+            Spacer(Modifier.height(24.dp))
+        }
+
+        item {
+            SectionHeader("Movies")
+            Column(
+                modifier = Modifier.padding(horizontal = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                MOVIES.forEach { item ->
+                    WideCard(
+                        content = item,
+                        hasAccess = accessState[item.passContent.id] == true,
+                        onClick = onContentClick,
+                    )
+                }
+            }
+            Spacer(Modifier.height(24.dp))
+        }
+
+        item {
+            SectionHeader("Series")
+            Column(
+                modifier = Modifier.padding(horizontal = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                SERIES.forEach { item ->
+                    WideCard(
+                        content = item,
+                        hasAccess = accessState[item.passContent.id] == true,
+                        onClick = onContentClick,
+                    )
+                }
+            }
         }
     }
 
-    Box(modifier = Modifier.fillMaxSize().background(BgDark)) {
-        LazyColumn(
-            modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(bottom = 40.dp),
-        ) {
-            item {
-                TopBar(
-                    loggedInPhone = loggedInPhone,
-                    onSignIn = { showLogin = true },
-                    onSignOut = { loggedInPhone = null },
-                )
-            }
+    // ── MatchPass Paywall ──────────────────────────────────────────────────────
+    if (paywallContent != null) {
+        val item = paywallContent!!
+        MatchPassSDK.Paywall(
+            content   = item.passContent,
+            userPhone = loggedInPhone,
+            onAccessGranted = { _ ->
+                accessState[item.passContent.id] = true
+                paywallContent = null
+                nowPlayingContent = item
+            },
+            onDismiss = { paywallContent = null },
+        )
+    }
 
-            item {
-                FeaturedHero(
-                    content = LIVE_SPORT.first(),
-                    hasAccess = accessState[LIVE_SPORT.first().passContent.id] == true,
-                    onClick = onContentClick,
-                )
-            }
-
-            item {
-                SectionHeader("Live Sport")
-                LazyRow(
-                    contentPadding = PaddingValues(horizontal = 16.dp),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                ) {
-                    items(LIVE_SPORT) { item ->
-                        SportCard(
-                            content = item,
-                            hasAccess = accessState[item.passContent.id] == true,
-                            onClick = onContentClick,
-                        )
-                    }
-                }
-                Spacer(Modifier.height(24.dp))
-            }
-
-            item {
-                SectionHeader("Movies")
-                Column(
-                    modifier = Modifier.padding(horizontal = 16.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
-                ) {
-                    MOVIES.forEach { item ->
-                        WideCard(
-                            content = item,
-                            hasAccess = accessState[item.passContent.id] == true,
-                            onClick = onContentClick,
-                        )
-                    }
-                }
-                Spacer(Modifier.height(24.dp))
-            }
-
-            item {
-                SectionHeader("Series")
-                Column(
-                    modifier = Modifier.padding(horizontal = 16.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
-                ) {
-                    SERIES.forEach { item ->
-                        WideCard(
-                            content = item,
-                            hasAccess = accessState[item.passContent.id] == true,
-                            onClick = onContentClick,
-                        )
-                    }
-                }
-            }
-        }
-
-        // ── MatchPass Login (skippable, full-screen) ───────────────────────────
-        if (showLogin) {
-            MatchPassSDK.Login(
-                onLoggedIn = { phone ->
-                    loggedInPhone = phone
-                    showLogin = false
-                },
-                onSkip = { showLogin = false },
-            )
-        }
-
-        // ── MatchPass Paywall ──────────────────────────────────────────────────
-        // Pass loggedInPhone → if not null the paywall skips the OTP step.
-        if (paywallContent != null) {
-            val item = paywallContent!!
-            MatchPassSDK.Paywall(
-                content = item.passContent,
-                userPhone = loggedInPhone,
-                onAccessGranted = { _ ->
-                    accessState[item.passContent.id] = true
-                    paywallContent = null
-                    nowPlayingContent = item
-                },
-                onDismiss = { paywallContent = null },
-            )
-        }
-
-        // ── Now Playing (mock player) ──────────────────────────────────────────
-        if (nowPlayingContent != null) {
-            NowPlayingScreen(
-                content = nowPlayingContent!!,
-                onBack = { nowPlayingContent = null },
-            )
-        }
+    // ── Now Playing ────────────────────────────────────────────────────────────
+    if (nowPlayingContent != null) {
+        NowPlayingScreen(
+            content = nowPlayingContent!!,
+            onBack  = { nowPlayingContent = null },
+        )
     }
 }
 
@@ -266,8 +293,7 @@ private fun NowPlayingScreen(content: SampleContent, onBack: () -> Unit) {
 
 @Composable
 private fun TopBar(
-    loggedInPhone: String?,
-    onSignIn: () -> Unit,
+    loggedInPhone: String?,   // null = guest (skipped login)
     onSignOut: () -> Unit,
 ) {
     Row(
@@ -290,6 +316,7 @@ private fun TopBar(
         }
 
         if (loggedInPhone != null) {
+            // Signed in — show truncated phone + avatar (tap to sign out)
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 TextButton(onClick = onSignOut) {
                     Text("···${loggedInPhone.takeLast(4)}", color = TextSub, fontSize = 12.sp)
@@ -302,13 +329,15 @@ private fun TopBar(
                 }
             }
         } else {
-            Button(
-                onClick = onSignIn,
-                shape = RoundedCornerShape(6.dp),
-                contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = DstvBlue),
+            // Guest — show chip indicating they're browsing without an account
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(6.dp))
+                    .background(Surface)
+                    .clickable(onClick = onSignOut)  // "sign out" returns to login gate
+                    .padding(horizontal = 12.dp, vertical = 8.dp),
             ) {
-                Text("Sign In", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                Text("Guest  ·  Sign in", color = TextSub, fontSize = 12.sp, fontWeight = FontWeight.Medium)
             }
         }
     }

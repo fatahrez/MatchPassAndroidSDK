@@ -164,6 +164,18 @@ object MatchPassSDK {
         )
     }
 
+    /**
+     * Returns the phone number verified in a previous session, or `null` if the user
+     * has never completed OTP login on this device.
+     *
+     * Use this on app start to decide whether to show the login gate or go straight
+     * to the home screen.
+     */
+    fun getStoredPhone(context: Context): String? {
+        checkInitialised()
+        return MatchPassStore(context).getPhone().ifBlank { null }
+    }
+
     // ── Programmatic access checks ───────────────────────────────────────────
 
     /**
