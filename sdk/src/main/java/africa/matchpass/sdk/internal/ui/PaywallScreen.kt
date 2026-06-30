@@ -1,6 +1,8 @@
 package africa.matchpass.sdk.internal.ui
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -10,6 +12,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
@@ -40,8 +43,12 @@ internal fun PaywallScreen(
 ) {
     val context = LocalContext.current
     val config = MatchPassSDK.config
+    // key = content.id ensures a separate ViewModel per content item.
+    // Without this, viewModel() returns the same instance regardless of which
+    // content is shown (typed by class only), causing stale state on repeated opens.
     val vm: PaywallViewModel = viewModel(
-        factory = PaywallViewModel.Factory(config, content, client, context, onAccessGranted, userPhone)
+        key = content.id,
+        factory = PaywallViewModel.Factory(config, content, client, context, onAccessGranted, userPhone),
     )
     val state by vm.state.collectAsState()
 
@@ -58,10 +65,16 @@ internal fun PaywallScreen(
                 modifier = Modifier.fillMaxSize(),
             )
         }
+        // Consume touches on the dim area so they don't fall through to content below
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(SdkColors.overlay),
+                .background(SdkColors.overlay)
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null,
+                    onClick = {},
+                ),
         )
 
         Column(

@@ -4,9 +4,6 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -29,11 +26,13 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -77,10 +76,10 @@ private val Scrim    = Color(0x99000000)
 fun StreamingHomeScreen() {
     val context = LocalContext.current
     val accessState = remember { mutableStateMapOf<String, Boolean>() }
-    var selectedContent by remember { mutableStateOf<SampleContent?>(null) }
+    // Separate states: paywallContent shows the SDK paywall; nowPlayingContent shows mock player
+    var paywallContent by remember { mutableStateOf<SampleContent?>(null) }
+    var nowPlayingContent by remember { mutableStateOf<SampleContent?>(null) }
 
-    // Silently check which content the user already has valid passes for.
-    // AccessChecker respects PassPolicy cache TTLs — MOVIE/SEASON won't hit the server.
     LaunchedEffect(Unit) {
         ALL_CONTENT.forEach { item ->
             val result = MatchPassSDK.checkAccess(context, item.passContent)
@@ -88,7 +87,18 @@ fun StreamingHomeScreen() {
         }
     }
 
+    // Gate clicks: if the user already has a pass, go straight to "Now Playing".
+    // If not, open the MatchPass paywall for purchase.
+    val onContentClick: (SampleContent) -> Unit = { item ->
+        if (accessState[item.passContent.id] == true) {
+            nowPlayingContent = item
+        } else {
+            paywallContent = item
+        }
+    }
+
     Box(modifier = Modifier.fillMaxSize().background(BgDark)) {
+        // ── Home screen ───────────────────────────────────────────────────────
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
             contentPadding = PaddingValues(bottom = 40.dp),
@@ -99,7 +109,7 @@ fun StreamingHomeScreen() {
                 FeaturedHero(
                     content = LIVE_SPORT.first(),
                     hasAccess = accessState[LIVE_SPORT.first().passContent.id] == true,
-                    onClick = { selectedContent = it },
+                    onClick = onContentClick,
                 )
             }
 
@@ -113,7 +123,7 @@ fun StreamingHomeScreen() {
                         SportCard(
                             content = item,
                             hasAccess = accessState[item.passContent.id] == true,
-                            onClick = { selectedContent = it },
+                            onClick = onContentClick,
                         )
                     }
                 }
@@ -130,7 +140,7 @@ fun StreamingHomeScreen() {
                         WideCard(
                             content = item,
                             hasAccess = accessState[item.passContent.id] == true,
-                            onClick = { selectedContent = it },
+                            onClick = onContentClick,
                         )
                     }
                 }
@@ -147,31 +157,103 @@ fun StreamingHomeScreen() {
                         WideCard(
                             content = item,
                             hasAccess = accessState[item.passContent.id] == true,
-                            onClick = { selectedContent = it },
+                            onClick = onContentClick,
                         )
                     }
                 }
             }
         }
 
-        // ── MatchPassSDK.Paywall overlaid on top when content is selected ──────
-        AnimatedVisibility(visible = selectedContent != null, enter = fadeIn(), exit = fadeOut()) {
-            selectedContent?.let { item ->
-                MatchPassSDK.Paywall(
-                    content = item.passContent,
-                    onAccessGranted = { _ ->
-                        // Update lock indicator immediately — user can resume instantly next open
-                        accessState[item.passContent.id] = true
-                        selectedContent = null
-                    },
-                    onDismiss = { selectedContent = null },
-                )
-            }
+        // ── MatchPass paywall (purchase flow) ─────────────────────────────────
+        if (paywallContent != null) {
+            val item = paywallContent!!
+            MatchPassSDK.Paywall(
+                content = item.passContent,
+                onAccessGranted = { _ ->
+                    accessState[item.passContent.id] = true
+                    paywallContent = null
+                    nowPlayingContent = item    // go straight to player on purchase
+                },
+                onDismiss = { paywallContent = null },
+            )
+        }
+
+        // ── Mock "Now Playing" screen (user already has a pass) ───────────────
+        if (nowPlayingContent != null) {
+            val item = nowPlayingContent!!
+            NowPlayingScreen(
+                content = item,
+                onBack = { nowPlayingContent = null },
+            )
         }
     }
 }
 
-// ── Components ────────────────────────────────────────────────────────────────
+// ── Now Playing ────────────────────────────────────────────────────────────────
+
+@Composable
+private fun NowPlayingScreen(content: SampleContent, onBack: () -> Unit) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Brush.verticalGradient(listOf(content.bgStart, Color(0xFF000000)))),
+    ) {
+        // Large emoji as video placeholder
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(content.emoji, fontSize = 80.sp)
+                Spacer(Modifier.height(24.dp))
+                Box(
+                    modifier = Modifier
+                        .size(72.dp)
+                        .clip(CircleShape)
+                        .background(Color(0x33FFFFFF)),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        Icons.Default.PlayArrow,
+                        contentDescription = "Playing",
+                        tint = Color.White,
+                        modifier = Modifier.size(40.dp),
+                    )
+                }
+                Spacer(Modifier.height(20.dp))
+                Text(
+                    text = content.passContent.title,
+                    color = Color.White,
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Bold,
+                )
+                Spacer(Modifier.height(4.dp))
+                Text(text = content.subtitle, color = Color(0xAAffffff), fontSize = 13.sp)
+                Spacer(Modifier.height(12.dp))
+                Row(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(6.dp))
+                        .background(Color(0x33FFC300))
+                        .padding(horizontal = 12.dp, vertical = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                    Icon(Icons.Default.Lock, contentDescription = null, tint = Gold, modifier = Modifier.size(12.dp))
+                    Text("MatchPass Active", color = Gold, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                }
+            }
+        }
+
+        // Back button
+        IconButton(
+            onClick = onBack,
+            modifier = Modifier
+                .statusBarsPadding()
+                .padding(8.dp),
+        ) {
+            Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = Color.White)
+        }
+    }
+}
+
+// ── Home screen components ────────────────────────────────────────────────────
 
 @Composable
 private fun TopBar() {
@@ -341,9 +423,7 @@ private fun WideCard(
         ) {
             Text(content.emoji, fontSize = 28.sp)
         }
-        Column(
-            modifier = Modifier.weight(1f).padding(horizontal = 14.dp),
-        ) {
+        Column(modifier = Modifier.weight(1f).padding(horizontal = 14.dp)) {
             Text(
                 text = content.passContent.title,
                 color = TextMain,
