@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import africa.matchpass.sdk.AccessResult
+import africa.matchpass.sdk.ContentType
 import africa.matchpass.sdk.MatchPassConfig
 import africa.matchpass.sdk.MatchPassContent
 import africa.matchpass.sdk.MatchPassGrant
@@ -166,11 +167,13 @@ internal class PaywallViewModel(
                 client.service.initiatePayment(
                     auth = "ApiKey ${config.apiKey}",
                     body = InitiatePaymentDto(
-                        phone     = phone,
-                        contentId = content.id,
-                        userRef   = _state.value.phoneNumber.trim(),
-                        amount    = content.price,
-                        currency  = content.currency,
+                        phone        = phone,
+                        contentId    = content.id,
+                        contentTitle = content.title,
+                        contentType  = if (content.contentType == ContentType.SEASON) "series_season" else content.contentType.name.lowercase(),
+                        userRef      = _state.value.phoneNumber.trim(),
+                        amount       = content.price,
+                        currency     = content.currency,
                     ),
                 )
             }.getOrElse { e ->

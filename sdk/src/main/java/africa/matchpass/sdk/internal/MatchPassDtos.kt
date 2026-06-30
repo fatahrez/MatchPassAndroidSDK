@@ -37,9 +37,11 @@ internal data class PassDto(
 }
 
 internal data class InitiatePaymentDto(
-    @SerializedName("phone")      val phone: String,
-    @SerializedName("content_id") val contentId: String,
-    @SerializedName("user_ref")   val userRef: String,
+    @SerializedName("phone")         val phone: String,
+    @SerializedName("content_id")    val contentId: String,
+    @SerializedName("content_title") val contentTitle: String,
+    @SerializedName("content_type")  val contentType: String,
+    @SerializedName("user_ref")      val userRef: String,
     val amount: String,
     val currency: String,
 )
