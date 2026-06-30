@@ -14,18 +14,9 @@ import africa.matchpass.sdk.internal.ui.PaywallScreen
  * ## Initialise (once, in Application.onCreate)
  *
  * ```kotlin
- * // Option A — Builder (recommended)
- * MatchPassSDK.Builder(this)
+ * MatchPassSDK.Builder(applicationContext)
  *     .apiKey("your-operator-api-key")
- *     .baseUrl("https://api.matchpass.africa/api/v1/")
- *     .debug(BuildConfig.DEBUG)
  *     .initialize()
- *
- * // Option B — direct init
- * MatchPassSDK.init(
- *     context = this,
- *     config  = MatchPassConfig(apiKey = "your-operator-api-key"),
- * )
  * ```
  *
  * ## Show the paywall
@@ -66,26 +57,24 @@ object MatchPassSDK {
      * Fluent builder — preferred over calling [init] directly.
      *
      * ```kotlin
-     * MatchPassSDK.Builder(this)
+     * MatchPassSDK.Builder(applicationContext)
      *     .apiKey("your-operator-api-key")
-     *     .debug(BuildConfig.DEBUG)
+     *     .debug(BuildConfig.DEBUG)   // optional — enables HTTP logging
      *     .initialize()
      * ```
      */
     class Builder(private val context: Context) {
         private var apiKey: String? = null
-        private var baseUrl: String = "https://api.matchpass.africa/api/v1/"
         private var debug: Boolean = false
 
         fun apiKey(key: String) = apply { apiKey = key }
-        fun baseUrl(url: String) = apply { baseUrl = url }
         fun debug(enabled: Boolean) = apply { debug = enabled }
 
         fun initialize() {
             val key = checkNotNull(apiKey) {
                 "apiKey is required. Call Builder.apiKey(\"...\") before initialize()."
             }
-            init(context, MatchPassConfig(apiKey = key, baseUrl = baseUrl, debug = debug))
+            init(context, MatchPassConfig(apiKey = key, debug = debug))
         }
     }
 
