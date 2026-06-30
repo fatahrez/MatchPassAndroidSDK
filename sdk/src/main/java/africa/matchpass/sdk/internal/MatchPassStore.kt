@@ -19,7 +19,14 @@ internal class MatchPassStore(private val prefs: SharedPreferences) {
         prefs.edit()
             .remove("pass_$contentId")
             .remove("validated_at_$contentId")
+            .remove("expires_at_$contentId")
             .apply()
+
+    fun saveExpiresAt(contentId: String, epochMillis: Long) =
+        prefs.edit().putLong("expires_at_$contentId", epochMillis).apply()
+
+    fun getExpiresAt(contentId: String): Long =
+        prefs.getLong("expires_at_$contentId", 0L)
 
     fun saveValidationTime(contentId: String, epochMillis: Long) =
         prefs.edit().putLong("validated_at_$contentId", epochMillis).apply()

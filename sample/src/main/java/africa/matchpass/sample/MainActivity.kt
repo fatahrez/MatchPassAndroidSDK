@@ -133,10 +133,31 @@ private fun HomeContent(
     var paywallContent    by remember { mutableStateOf<SampleContent?>(null) }
     var nowPlayingContent by remember { mutableStateOf<SampleContent?>(null) }
 
+    // Re-check access state in a loop. After each pass the loop sleeps until
+    // just after the nearest-expiring pass's expiry time, then wakes and
+    // re-checks everything. Cards flip from unlocked → locked automatically.
     LaunchedEffect(Unit) {
-        ALL_CONTENT.forEach { item ->
-            val result = MatchPassSDK.checkAccess(context, item.passContent)
-            accessState[item.passContent.id] = result is AccessResult.Granted
+        while (true) {
+            val now = System.currentTimeMillis()
+            var earliestExpiry = Long.MAX_VALUE
+
+            ALL_CONTENT.forEach { item ->
+                val result = MatchPassSDK.checkAccess(context, item.passContent)
+                accessState[item.passContent.id] = result is AccessResult.Granted
+
+                // Track the soonest upcoming expiry so we wake up at the right time
+                MatchPassSDK.getExpiresAt(context, item.passContent.id)?.let { expiry ->
+                    if (expiry > now && expiry < earliestExpiry) earliestExpiry = expiry
+                }
+            }
+
+            val delayMs = if (earliestExpiry < Long.MAX_VALUE) {
+                // Wake 1 second after the pass expires; never wait less than 5 s or more than 60 s
+                (earliestExpiry - System.currentTimeMillis() + 1_000L).coerceIn(5_000L, 60_000L)
+            } else {
+                60_000L  // no active passes — idle check every minute
+            }
+            kotlinx.coroutines.delay(delayMs)
         }
     }
 
@@ -162,6 +183,23 @@ private fun HomeContent(
                 hasAccess = accessState[LIVE_SPORT.first().passContent.id] == true,
                 onClick = onContentClick,
             )
+        }
+
+        item {
+            SectionHeader("Live Channels")
+            LazyRow(
+                contentPadding = PaddingValues(horizontal = 16.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                items(CHANNELS) { item ->
+                    ChannelCard(
+                        content = item,
+                        hasAccess = accessState[item.passContent.id] == true,
+                        onClick = onContentClick,
+                    )
+                }
+            }
+            Spacer(Modifier.height(24.dp))
         }
 
         item {
@@ -344,6 +382,87 @@ private fun TopBar(
 }
 
 // ── Content cards ──────────────────────────────────────────────────────────────
+
+@Composable
+private fun ChannelCard(content: SampleContent, hasAccess: Boolean, onClick: (SampleContent) -> Unit) {
+    Box(
+        modifier = Modifier
+            .width(130.dp)
+            .height(150.dp)
+            .clip(RoundedCornerShape(12.dp))
+            .background(Brush.verticalGradient(listOf(content.bgStart, content.bgEnd)))
+            .clickable { onClick(content) },
+    ) {
+        // Channel number top-left
+        content.channelNumber?.let { num ->
+            Text(
+                text = num,
+                color = Color.White.copy(alpha = 0.45f),
+                fontSize = 10.sp,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(9.dp),
+            )
+        }
+
+        // LIVE badge top-right
+        if (content.isLive) {
+            Box(modifier = Modifier.align(Alignment.TopEnd).padding(8.dp)) {
+                LiveBadge()
+            }
+        }
+
+        // Big emoji centred (above the text area)
+        Text(
+            text = content.emoji,
+            fontSize = 34.sp,
+            modifier = Modifier.align(Alignment.Center).padding(bottom = 36.dp),
+        )
+
+        // Bottom info strip
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .align(Alignment.BottomCenter)
+                .background(Color(0xCC000000))
+                .padding(horizontal = 10.dp, vertical = 8.dp),
+        ) {
+            Column {
+                Text(
+                    text = content.passContent.title,
+                    color = TextMain,
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                content.onNow?.let { programme ->
+                    Text(
+                        text = programme,
+                        color = TextSub,
+                        fontSize = 10.sp,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+                Spacer(Modifier.height(5.dp))
+                if (hasAccess) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(
+                            modifier = Modifier
+                                .size(6.dp)
+                                .clip(CircleShape)
+                                .background(Color(0xFF2ECC71)),
+                        )
+                        Spacer(Modifier.width(4.dp))
+                        Text("Watching", color = Color(0xFF2ECC71), fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                    }
+                } else {
+                    PriceBadge(content.passContent.currency, content.passContent.price)
+                }
+            }
+        }
+    }
+}
 
 @Composable
 private fun FeaturedHero(content: SampleContent, hasAccess: Boolean, onClick: (SampleContent) -> Unit) {

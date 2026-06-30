@@ -50,11 +50,35 @@ class AccessCheckerTest {
         coVerify(exactly = 0) { service.validatePass(any(), any()) }
     }
 
+    // ── Local expiry detection ────────────────────────────────────────────────
+
+    @Test
+    fun `returns Expired immediately when stored expiry is in the past without server call`() = runTest {
+        every { store.getToken(content.id) } returns "tok-123"
+        every { store.getExpiresAt(content.id) } returns System.currentTimeMillis() - 5_000L // 5s ago
+
+        val result = checker.check(content)
+
+        assertTrue(result is AccessResult.Expired)
+        coVerify(exactly = 0) { service.validatePass(any(), any()) }
+    }
+
+    @Test
+    fun `clears pass when locally detected as expired`() = runTest {
+        every { store.getToken(content.id) } returns "tok-123"
+        every { store.getExpiresAt(content.id) } returns System.currentTimeMillis() - 1L
+
+        checker.check(content)
+
+        verify { store.clearPass(content.id) }
+    }
+
     // ── Cache hit — skip server ────────────────────────────────────────────────
 
     @Test
     fun `returns Granted from cache when within TTL without server call`() = runTest {
         every { store.getToken(content.id) } returns "tok-123"
+        every { store.getExpiresAt(content.id) } returns 0L  // no expiry stored
         every { store.getValidationTime(content.id) } returns System.currentTimeMillis() - 1_000L // 1s ago
 
         val result = checker.check(content)
@@ -102,6 +126,37 @@ class AccessCheckerTest {
         checker.check(content)
 
         verify { store.saveValidationTime(content.id, any()) }
+    }
+
+    @Test
+    fun `saves expiry epoch millis from server response`() = runTest {
+        every { store.getToken(content.id) } returns "tok-123"
+        every { store.getValidationTime(content.id) } returns 0L
+        coEvery { service.validatePass(any(), any()) } returns
+            ValidatePassDto(isValid = true, status = "active", expiresAt = "2099-06-15T12:00:00.000000Z")
+
+        checker.check(content)
+
+        verify { store.saveExpiresAt(content.id, any()) }
+    }
+
+    // ── parseIso8601ToMillis ──────────────────────────────────────────────────
+
+    @Test
+    fun `parseIso8601ToMillis parses seconds-only UTC format`() {
+        val result = AccessChecker.parseIso8601ToMillis("2099-01-01T00:00:00Z")
+        assertTrue(result != null && result > 0)
+    }
+
+    @Test
+    fun `parseIso8601ToMillis parses DRF microseconds format`() {
+        val result = AccessChecker.parseIso8601ToMillis("2099-01-01T00:00:00.123456Z")
+        assertTrue(result != null && result > 0)
+    }
+
+    @Test
+    fun `parseIso8601ToMillis returns null for blank string`() {
+        assertFalse(AccessChecker.parseIso8601ToMillis("") != null)
     }
 
     @Test

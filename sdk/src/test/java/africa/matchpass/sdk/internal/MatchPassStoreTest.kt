@@ -74,6 +74,27 @@ class MatchPassStoreTest {
         assertEquals(1_700_000_000_000L, store.getValidationTime("epl-match-001"))
     }
 
+    @Test
+    fun `clearPass also removes expiry timestamp`() {
+        store.savePass("epl-match-001", "tok-abc")
+        store.saveExpiresAt("epl-match-001", 9_999_999_999_000L)
+        store.clearPass("epl-match-001")
+        assertEquals(0L, store.getExpiresAt("epl-match-001"))
+    }
+
+    // ── Expiry timestamp ───────────────────────────────────────────────────────
+
+    @Test
+    fun `getExpiresAt returns 0 when nothing saved`() {
+        assertEquals(0L, store.getExpiresAt("unknown-content"))
+    }
+
+    @Test
+    fun `saveExpiresAt and getExpiresAt round-trip`() {
+        store.saveExpiresAt("epl-match-001", 9_999_999_999_000L)
+        assertEquals(9_999_999_999_000L, store.getExpiresAt("epl-match-001"))
+    }
+
     // ── Phone ──────────────────────────────────────────────────────────────────
 
     @Test

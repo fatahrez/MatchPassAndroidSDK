@@ -7,6 +7,9 @@ import africa.matchpass.sdk.MatchPassException
 import africa.matchpass.sdk.MatchPassGrant
 import retrofit2.HttpException
 import java.io.IOException
+import java.text.SimpleDateFormat
+import java.util.Locale
+import java.util.TimeZone
 
 internal class AccessChecker(
     private val config: MatchPassConfig,
@@ -17,18 +20,24 @@ internal class AccessChecker(
     /**
      * Checks whether the user has a valid pass for [content].
      *
-     * - If no token is stored → [AccessResult.NotPurchased].
-     * - If a token is stored and the last successful validation is within the
-     *   content's [PassPolicy.cacheTtlSeconds] → [AccessResult.Granted] without a
-     *   server round-trip.
-     * - Otherwise validates with the server. On success, updates the cache timestamp.
-     * - On network errors, returns [AccessResult.Error] without clearing the stored
-     *   pass (assume access rather than blocking the user on a transient failure).
+     * Order of checks:
+     * 1. No token stored → NotPurchased.
+     * 2. Stored expiry time is in the past → Expired (clears pass, no network).
+     * 3. Last server validation is still within policy cache TTL → Granted (no network).
+     * 4. Otherwise validate with the server. Caches new expiry and validation time.
+     *    Network errors return Error without clearing the pass (fail open).
      */
     suspend fun check(content: MatchPassContent): AccessResult {
         val token = store.getToken(content.id) ?: return AccessResult.NotPurchased
 
-        // Respect the policy's cache window — skip server call when cache is fresh
+        // Local expiry check — avoids a network round-trip for passes we know are done.
+        val storedExpiry = store.getExpiresAt(content.id)
+        if (storedExpiry > 0L && System.currentTimeMillis() >= storedExpiry) {
+            store.clearPass(content.id)
+            return AccessResult.Expired("")
+        }
+
+        // Cache window — respect policy TTL before hitting the server.
         val cacheTtlMs = content.policy.cacheTtlSeconds * 1_000L
         val lastValidated = store.getValidationTime(content.id)
         if (lastValidated > 0L && System.currentTimeMillis() - lastValidated < cacheTtlMs) {
@@ -41,6 +50,7 @@ internal class AccessChecker(
             val dto = service.validatePass("ApiKey ${config.apiKey}", token)
             if (dto.isValid) {
                 store.saveValidationTime(content.id, System.currentTimeMillis())
+                parseIso8601ToMillis(dto.expiresAt)?.let { store.saveExpiresAt(content.id, it) }
                 AccessResult.Granted(
                     MatchPassGrant(token = token, contentId = content.id, expiresAt = dto.expiresAt)
                 )
@@ -55,6 +65,31 @@ internal class AccessChecker(
             AccessResult.Error(MatchPassException.NetworkError(e))
         } catch (e: HttpException) {
             AccessResult.Error(MatchPassException.ServerError(e.code(), e.message() ?: "Unknown error"))
+        }
+    }
+
+    companion object {
+        /**
+         * Parses an ISO 8601 UTC string from DRF into epoch millis.
+         * Handles microseconds ("2024-12-15T21:00:00.123456Z") by truncating to 3 decimal places.
+         */
+        internal fun parseIso8601ToMillis(dateStr: String): Long? {
+            if (dateStr.isBlank()) return null
+            // DRF emits microseconds (6 digits after dot). SimpleDateFormat only handles millis (3).
+            val normalized = dateStr.replace(Regex("\\.(\\d{3})\\d+Z$"), ".$1Z")
+            val formats = listOf(
+                "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'",
+                "yyyy-MM-dd'T'HH:mm:ss'Z'",
+            )
+            for (fmt in formats) {
+                try {
+                    return SimpleDateFormat(fmt, Locale.US)
+                        .also { it.timeZone = TimeZone.getTimeZone("UTC") }
+                        .parse(normalized)
+                        ?.time
+                } catch (_: Exception) {}
+            }
+            return null
         }
     }
 }

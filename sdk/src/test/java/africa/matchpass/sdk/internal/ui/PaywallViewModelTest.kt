@@ -19,7 +19,6 @@ import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
-import io.mockk.slot
 import io.mockk.verify
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -57,9 +56,15 @@ class PaywallViewModelTest {
     fun setUp() {
         Dispatchers.setMain(testDispatcher)
         every { store.getPhone() } returns ""
-        viewModel = PaywallViewModel(config, content, client, store, checker) { grant ->
-            capturedGrants.add(grant)
-        }
+        // userPhone is last — must use named param because it's not a function type
+        viewModel = PaywallViewModel(
+            config = config,
+            content = content,
+            client = client,
+            store = store,
+            checker = checker,
+            onAccessGranted = { grant -> capturedGrants.add(grant) },
+        )
     }
 
     @After
@@ -77,7 +82,10 @@ class PaywallViewModelTest {
     @Test
     fun `initial phone is pre-filled from store`() {
         every { store.getPhone() } returns "+27821234567"
-        val vm = PaywallViewModel(config, content, client, store, checker) {}
+        val vm = PaywallViewModel(
+            config = config, content = content, client = client, store = store,
+            checker = checker, onAccessGranted = {},
+        )
         assertEquals("+27821234567", vm.state.value.phoneNumber)
     }
 
@@ -97,24 +105,24 @@ class PaywallViewModelTest {
         assertNull(viewModel.state.value.error)
     }
 
-    // ── checkExistingPass ──────────────────────────────────────────────────────
+    // ── onStart ────────────────────────────────────────────────────────────────
 
     @Test
-    fun `checkExistingPass does nothing when no token stored`() = runTest {
+    fun `onStart stays on EnteringPhone when no token and no known phone`() = runTest {
         every { store.getToken(content.id) } returns null
-        viewModel.checkExistingPass()
+        viewModel.onStart()
         advanceUntilIdle()
         assertEquals(PaywallStep.EnteringPhone, viewModel.state.value.step)
         coVerify(exactly = 0) { checker.check(any()) }
     }
 
     @Test
-    fun `checkExistingPass fires onAccessGranted when pass is still valid`() = runTest {
+    fun `onStart fires onAccessGranted when stored pass is still valid`() = runTest {
         every { store.getToken(content.id) } returns "tok-valid"
         val grant = MatchPassGrant(token = "tok-valid", contentId = content.id, expiresAt = "2099-01-01T00:00:00Z")
         coEvery { checker.check(content) } returns AccessResult.Granted(grant)
 
-        viewModel.checkExistingPass()
+        viewModel.onStart()
         advanceUntilIdle()
 
         assertEquals(1, capturedGrants.size)
@@ -122,16 +130,27 @@ class PaywallViewModelTest {
     }
 
     @Test
-    fun `checkExistingPass shows error and returns to EnteringPhone when pass is expired`() = runTest {
+    fun `onStart goes to Confirming with error when stored pass is expired`() = runTest {
         every { store.getToken(content.id) } returns "tok-old"
         coEvery { checker.check(content) } returns AccessResult.Expired("2020-01-01T00:00:00Z")
 
-        viewModel.checkExistingPass()
+        viewModel.onStart()
         advanceUntilIdle()
 
-        assertEquals(PaywallStep.EnteringPhone, viewModel.state.value.step)
+        // Expired → Confirming (let user repurchase), not EnteringPhone
+        assertEquals(PaywallStep.Confirming, viewModel.state.value.step)
         assertNotNull(viewModel.state.value.error)
         assertTrue(capturedGrants.isEmpty())
+    }
+
+    @Test
+    fun `onStart skips to Confirming when phone is already known`() = runTest {
+        every { store.getToken(content.id) } returns null
+        every { store.getPhone() } returns "+27821234567"
+
+        viewModel.onStart()
+
+        assertEquals(PaywallStep.Confirming, viewModel.state.value.step)
     }
 
     // ── requestOtp ─────────────────────────────────────────────────────────────
@@ -197,7 +216,7 @@ class PaywallViewModelTest {
     }
 
     @Test
-    fun `verifyOtp shows error and stays on AwaitingOtp when OTP is wrong`() = runTest {
+    fun `verifyOtp shows error when OTP is wrong`() = runTest {
         viewModel.setPhone("+27821234567")
         viewModel.setOtp("000000")
         coEvery { service.verifyOtp(any()) } throws RuntimeException("Invalid OTP")
@@ -211,7 +230,7 @@ class PaywallViewModelTest {
     // ── confirmAndPay ──────────────────────────────────────────────────────────
 
     @Test
-    fun `confirmAndPay happy path transitions through all steps and fires onAccessGranted`() = runTest {
+    fun `confirmAndPay transitions through all steps then reaches AccessGranted`() = runTest {
         viewModel.setPhone("+27821234567")
         val issuedPass = PassDto(token = "pass-tok", contentId = content.id, expiresAt = "2099-01-01T00:00:00Z")
         coEvery {
@@ -221,12 +240,29 @@ class PaywallViewModelTest {
             ValidatePassDto(isValid = true, status = "active", expiresAt = "2099-01-01T00:00:00Z")
 
         viewModel.confirmAndPay()
-
-        // Advance past the 2600ms payment simulation
         advanceTimeBy(3_000)
         advanceUntilIdle()
 
+        // Grant is stored in state — not yet fired (user must tap Watch Now)
         assertEquals(PaywallStep.AccessGranted, viewModel.state.value.step)
+        assertNotNull(viewModel.state.value.issuedGrant)
+        assertTrue(capturedGrants.isEmpty())
+    }
+
+    @Test
+    fun `watchContent fires onAccessGranted after successful purchase`() = runTest {
+        viewModel.setPhone("+27821234567")
+        val issuedPass = PassDto(token = "pass-tok", contentId = content.id, expiresAt = "2099-01-01T00:00:00Z")
+        coEvery { service.issuePass(any(), any()) } returns issuedPass
+        coEvery { service.validatePass(any(), any()) } returns
+            ValidatePassDto(isValid = true, status = "active", expiresAt = "2099-01-01T00:00:00Z")
+
+        viewModel.confirmAndPay()
+        advanceTimeBy(3_000)
+        advanceUntilIdle()
+
+        viewModel.watchContent()
+
         assertEquals(1, capturedGrants.size)
         assertEquals("pass-tok", capturedGrants[0].token)
     }

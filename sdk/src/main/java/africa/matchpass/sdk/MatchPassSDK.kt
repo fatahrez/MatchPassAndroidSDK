@@ -176,6 +176,19 @@ object MatchPassSDK {
         return MatchPassStore(context).getPhone().ifBlank { null }
     }
 
+    /**
+     * Returns the epoch-millisecond timestamp at which the pass for [contentId] expires,
+     * or `null` if no pass is stored or the expiry was never recorded.
+     *
+     * Use this to schedule UI re-checks precisely when a pass expires rather than polling
+     * on a fixed interval.
+     */
+    fun getExpiresAt(context: Context, contentId: String): Long? {
+        checkInitialised()
+        val ms = MatchPassStore(context).getExpiresAt(contentId)
+        return if (ms > 0L) ms else null
+    }
+
     // ── Programmatic access checks ───────────────────────────────────────────
 
     /**

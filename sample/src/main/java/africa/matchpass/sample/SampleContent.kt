@@ -11,9 +11,101 @@ data class SampleContent(
     val bgStart: Color,
     val bgEnd: Color,
     val emoji: String,
+    // Channel-specific (null for non-channel content)
+    val channelNumber: String? = null,
+    val onNow: String? = null,
 )
 
 // Seeded content — IDs match external_id values in MatchPassAPI/seed_demo.py
+
+val CHANNELS = listOf(
+    SampleContent(
+        passContent = MatchPassContent(
+            id = "ch-supersport1",
+            title = "SuperSport 1",
+            price = "15.00",
+            currency = "ZAR",
+            durationHours = 24,
+            contentType = ContentType.CHANNEL,
+        ),
+        subtitle = "Live Sport",
+        isLive = true,
+        bgStart = Color(0xFF001E62),
+        bgEnd = Color(0xFF003A9E),
+        emoji = "🏆",
+        channelNumber = "201",
+        onNow = "UFC Fight Night",
+    ),
+    SampleContent(
+        passContent = MatchPassContent(
+            id = "ch-mnet",
+            title = "M-Net",
+            price = "20.00",
+            currency = "ZAR",
+            durationHours = 24,
+            contentType = ContentType.CHANNEL,
+        ),
+        subtitle = "Entertainment",
+        isLive = true,
+        bgStart = Color(0xFF1A0A2E),
+        bgEnd = Color(0xFF3D1A6E),
+        emoji = "🎬",
+        channelNumber = "101",
+        onNow = "The Crown S4 E6",
+    ),
+    SampleContent(
+        passContent = MatchPassContent(
+            id = "ch-kyknet",
+            title = "kykNET",
+            price = "10.00",
+            currency = "ZAR",
+            durationHours = 24,
+            contentType = ContentType.CHANNEL,
+        ),
+        subtitle = "Afrikaans",
+        isLive = true,
+        bgStart = Color(0xFF0A2D0A),
+        bgEnd = Color(0xFF1A4A1A),
+        emoji = "📡",
+        channelNumber = "144",
+        onNow = "Boer soek 'n Vrou",
+    ),
+    SampleContent(
+        passContent = MatchPassContent(
+            id = "ch-channel-o",
+            title = "Channel O",
+            price = "8.00",
+            currency = "ZAR",
+            durationHours = 24,
+            contentType = ContentType.CHANNEL,
+        ),
+        subtitle = "Music",
+        isLive = true,
+        bgStart = Color(0xFF2D0A3D),
+        bgEnd = Color(0xFF5A1A7A),
+        emoji = "🎵",
+        channelNumber = "320",
+        onNow = "Top 10 Afrobeats",
+    ),
+    SampleContent(
+        passContent = MatchPassContent(
+            id = "ch-cnn",
+            title = "CNN International",
+            price = "12.00",
+            currency = "ZAR",
+            durationHours = 24,
+            contentType = ContentType.CHANNEL,
+        ),
+        subtitle = "News",
+        isLive = true,
+        bgStart = Color(0xFF9B1C1C),
+        bgEnd = Color(0xFF5C0000),
+        emoji = "📺",
+        channelNumber = "401",
+        onNow = "World Business Today",
+    ),
+)
+
 val LIVE_SPORT = listOf(
     SampleContent(
         passContent = MatchPassContent(
@@ -113,4 +205,4 @@ val SERIES = listOf(
     ),
 )
 
-val ALL_CONTENT = LIVE_SPORT + MOVIES + SERIES
+val ALL_CONTENT = CHANNELS + LIVE_SPORT + MOVIES + SERIES

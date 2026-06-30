@@ -35,6 +35,7 @@ junit-ext                    = { group = "androidx.test.ext",       name = "juni
 mockk                        = { group = "io.mockk",                name = "mockk",                       version.ref = "mockk" }
 kotlinx-coroutines-test      = { group = "org.jetbrains.kotlinx",  name = "kotlinx-coroutines-test",     version.ref = "coroutinesTest" }
 robolectric                  = { group = "org.robolectric",         name = "robolectric",                 version.ref = "robolectric" }
+androidx-test-core           = { group = "androidx.test",            name = "core",                        version = "1.6.1" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
