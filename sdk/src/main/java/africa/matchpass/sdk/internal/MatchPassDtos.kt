@@ -36,6 +36,15 @@ internal data class PassDto(
     fun toGrant() = MatchPassGrant(token = token, contentId = contentId, expiresAt = expiresAt)
 }
 
+internal data class LookupPassDto(
+    val token: String = "",
+    @SerializedName("content_id") val contentId: String = "",
+    @SerializedName("expires_at") val expiresAt: String = "",
+    val valid: Boolean = false,
+) {
+    fun toGrant() = MatchPassGrant(token = token, contentId = contentId, expiresAt = expiresAt)
+}
+
 internal data class ValidatePassDto(
     @SerializedName("valid") val isValid: Boolean = false,
     val status: String = "",

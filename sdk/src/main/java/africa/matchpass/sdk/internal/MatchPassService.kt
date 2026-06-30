@@ -28,4 +28,16 @@ internal interface MatchPassService {
         @Header("Authorization") auth: String,
         @Query("token") token: String,
     ): ValidatePassDto
+
+    /**
+     * Looks up an existing valid pass by user_ref + content_id.
+     * Returns 404 if no valid pass exists — caller should catch [HttpException] with code 404
+     * and proceed to the purchase flow.
+     */
+    @GET("passes/lookup/")
+    suspend fun lookupPass(
+        @Header("Authorization") auth: String,
+        @Query("user_ref") userRef: String,
+        @Query("content_id") contentId: String,
+    ): LookupPassDto
 }

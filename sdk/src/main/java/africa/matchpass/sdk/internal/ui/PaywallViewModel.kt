@@ -14,6 +14,7 @@ import africa.matchpass.sdk.internal.MatchPassClient
 import africa.matchpass.sdk.internal.MatchPassStore
 import africa.matchpass.sdk.internal.OtpRequestDto
 import africa.matchpass.sdk.internal.OtpVerifyDto
+import retrofit2.HttpException
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -42,11 +43,12 @@ internal class PaywallViewModel(
     fun changePhone() = _state.update { it.copy(step = PaywallStep.EnteringPhone, error = null) }
 
     /**
-     * Called when the paywall opens. Three outcomes:
-     * 1. Existing pass found → validate silently → fire [onAccessGranted] if still valid.
-     * 2. No pass, but phone is known (logged in previously or provided by host app) →
-     *    skip OTP and go straight to the purchase confirmation screen.
-     * 3. First time user → show phone entry to initiate OTP login.
+     * Called when the paywall opens. Four outcomes:
+     * 1. Local token found → validate silently → fire [onAccessGranted] if still valid.
+     * 2. No local token, phone is known → check server for an existing pass (restore
+     *    after reinstall / device switch). If found → restore locally + grant access.
+     * 3. No local token, phone known, no server pass → show purchase confirmation.
+     * 4. First-time user (no phone) → show phone entry for OTP login.
      */
     fun onStart() {
         val hasExistingPass = store.getToken(content.id) != null
@@ -56,9 +58,53 @@ internal class PaywallViewModel(
             hasExistingPass -> resumeExistingPass()
             knownPhone != null -> {
                 if (userPhone != null) store.savePhone(userPhone)
-                _state.update { it.copy(step = PaywallStep.Confirming) }
+                lookupServerPass(knownPhone)
             }
             else -> _state.update { it.copy(step = PaywallStep.EnteringPhone) }
+        }
+    }
+
+    /**
+     * Checks the server for a valid pass this user already purchased (another device,
+     * reinstall, etc). On success the pass is restored locally and access is granted
+     * without any payment. On 404 the user is sent to the purchase confirmation screen.
+     */
+    private fun lookupServerPass(phone: String) {
+        viewModelScope.launch {
+            _state.update { it.copy(step = PaywallStep.Resuming) }
+            try {
+                val dto = client.service.lookupPass(
+                    auth = "ApiKey ${config.apiKey}",
+                    userRef = phone,
+                    contentId = content.id,
+                )
+                // Restore pass locally so subsequent opens skip this round-trip
+                store.savePass(content.id, dto.token)
+                store.saveValidationTime(content.id, System.currentTimeMillis())
+                AccessChecker.parseIso8601ToMillis(dto.expiresAt)
+                    ?.let { store.saveExpiresAt(content.id, it) }
+                onAccessGranted(dto.toGrant())
+            } catch (e: HttpException) {
+                if (e.code() == 404) {
+                    // No pass on server — safe to proceed to purchase
+                    _state.update { it.copy(step = PaywallStep.Confirming) }
+                } else {
+                    _state.update {
+                        it.copy(
+                            step = PaywallStep.Confirming,
+                            error = "Could not verify your pass (${e.code()}). Tap Pay to purchase.",
+                        )
+                    }
+                }
+            } catch (e: Exception) {
+                // Network error — go to Confirming with a warning so they can retry
+                _state.update {
+                    it.copy(
+                        step = PaywallStep.Confirming,
+                        error = "Network error checking your pass. Check your connection.",
+                    )
+                }
+            }
         }
     }
 

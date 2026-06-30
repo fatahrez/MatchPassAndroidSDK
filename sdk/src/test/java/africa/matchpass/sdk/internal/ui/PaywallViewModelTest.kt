@@ -144,13 +144,41 @@ class PaywallViewModelTest {
     }
 
     @Test
-    fun `onStart skips to Confirming when phone is already known`() = runTest {
+    fun `onStart goes to Confirming when phone is known but no server pass exists`() = runTest {
         every { store.getToken(content.id) } returns null
         every { store.getPhone() } returns "+27821234567"
+        // Server returns 404 — no existing pass, proceed to purchase
+        coEvery { service.lookupPass(any(), "+27821234567", content.id) } throws
+            retrofit2.HttpException(
+                okhttp3.ResponseBody.create(null, "").let {
+                    retrofit2.Response.error<Any>(404, it)
+                }
+            )
 
         viewModel.onStart()
+        advanceUntilIdle()
 
         assertEquals(PaywallStep.Confirming, viewModel.state.value.step)
+    }
+
+    @Test
+    fun `onStart restores pass and fires onAccessGranted when server has a valid pass`() = runTest {
+        every { store.getToken(content.id) } returns null
+        every { store.getPhone() } returns "+27821234567"
+        val dto = africa.matchpass.sdk.internal.LookupPassDto(
+            token = "restored-tok",
+            contentId = content.id,
+            expiresAt = "2099-01-01T00:00:00Z",
+            valid = true,
+        )
+        coEvery { service.lookupPass(any(), "+27821234567", content.id) } returns dto
+
+        viewModel.onStart()
+        advanceUntilIdle()
+
+        verify { store.savePass(content.id, "restored-tok") }
+        assertEquals(1, capturedGrants.size)
+        assertEquals("restored-tok", capturedGrants[0].token)
     }
 
     // ── requestOtp ─────────────────────────────────────────────────────────────
