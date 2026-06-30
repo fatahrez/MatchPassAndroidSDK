@@ -42,7 +42,13 @@ internal fun PhonePanel(
             fontSize = 12.sp,
         )
         HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp), color = SdkColors.card)
-        Text(text = "Enter your mobile number", color = SdkColors.text, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+        Text(text = "Verify your number", color = SdkColors.text, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+        Spacer(Modifier.height(2.dp))
+        Text(
+            text = "One-time only — future purchases will be instant",
+            color = SdkColors.textSecondary,
+            fontSize = 11.sp,
+        )
         Spacer(Modifier.height(10.dp))
         OutlinedTextField(
             value = state.phoneNumber,
@@ -68,7 +74,7 @@ internal fun PhonePanel(
             colors = ButtonDefaults.buttonColors(containerColor = SdkColors.blue),
             enabled = state.phoneNumber.isNotBlank(),
         ) {
-            Text("Get OTP", fontWeight = FontWeight.Black, fontSize = 15.sp)
+            Text("Send verification code", fontWeight = FontWeight.Black, fontSize = 15.sp)
         }
         Spacer(Modifier.height(8.dp))
         TextButton(onClick = onDismiss, modifier = Modifier.fillMaxWidth()) {

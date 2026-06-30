@@ -105,16 +105,20 @@ object MatchPassSDK {
     /**
      * Drop-in paywall composable. Manages its own state — no ViewModel wiring needed.
      *
-     * - **First open** — runs the full OTP → payment → issuance flow.
-     * - **Returning user** — validates the cached pass (respecting [PassPolicy.cacheTtlSeconds])
-     *   and calls [onAccessGranted] immediately if still valid.
-     * - **Expired pass** — clears local storage, shows an error, restarts the purchase flow.
+     * **Flow:**
+     * - Existing valid pass → validates silently, calls [onAccessGranted] immediately.
+     * - Known phone (returned user or [userPhone] supplied) → skips OTP, shows purchase confirmation.
+     * - First-time user → phone entry → OTP (one-time login) → confirmation → payment.
+     *
+     * @param userPhone  If the host app already knows the user's phone (they're signed in),
+     *                   pass it here to skip the OTP step entirely.
      */
     @Composable
     fun Paywall(
         content: MatchPassContent,
         onAccessGranted: (MatchPassGrant) -> Unit,
         onDismiss: () -> Unit,
+        userPhone: String? = null,
     ) {
         checkInitialised()
         PaywallScreen(
@@ -122,6 +126,7 @@ object MatchPassSDK {
             client = client,
             onAccessGranted = onAccessGranted,
             onDismiss = onDismiss,
+            userPhone = userPhone,
         )
     }
 

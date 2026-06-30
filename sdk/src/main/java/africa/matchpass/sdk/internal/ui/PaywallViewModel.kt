@@ -28,37 +28,57 @@ internal class PaywallViewModel(
     private val store: MatchPassStore,
     private val checker: AccessChecker,
     private val onAccessGranted: (MatchPassGrant) -> Unit,
+    /** Pre-authenticated phone from the host app — skips the OTP step entirely. */
+    private val userPhone: String? = null,
 ) : ViewModel() {
 
-    private val _state = MutableStateFlow(PaywallState(phoneNumber = store.getPhone()))
+    private val _state = MutableStateFlow(
+        PaywallState(phoneNumber = userPhone ?: store.getPhone())
+    )
     val state: StateFlow<PaywallState> = _state.asStateFlow()
 
     fun setPhone(value: String) = _state.update { it.copy(phoneNumber = value, error = null) }
     fun setOtp(value: String) = _state.update { it.copy(otpCode = value, error = null) }
+    fun changePhone() = _state.update { it.copy(step = PaywallStep.EnteringPhone, error = null) }
 
-    /** Called on composable entry — silently resumes an existing valid pass. */
-    fun checkExistingPass() {
-        if (store.getToken(content.id) == null) return
+    /**
+     * Called when the paywall opens. Three outcomes:
+     * 1. Existing pass found → validate silently → fire [onAccessGranted] if still valid.
+     * 2. No pass, but phone is known (logged in previously or provided by host app) →
+     *    skip OTP and go straight to the purchase confirmation screen.
+     * 3. First time user → show phone entry to initiate OTP login.
+     */
+    fun onStart() {
+        val hasExistingPass = store.getToken(content.id) != null
+        val knownPhone = userPhone ?: store.getPhone().ifBlank { null }
+
+        when {
+            hasExistingPass -> resumeExistingPass()
+            knownPhone != null -> {
+                if (userPhone != null) store.savePhone(userPhone)
+                _state.update { it.copy(step = PaywallStep.Confirming) }
+            }
+            else -> _state.update { it.copy(step = PaywallStep.EnteringPhone) }
+        }
+    }
+
+    private fun resumeExistingPass() {
         viewModelScope.launch {
             _state.update { it.copy(step = PaywallStep.Resuming) }
             when (val result = checker.check(content)) {
                 is AccessResult.Granted -> onAccessGranted(result.grant)
                 is AccessResult.Expired -> _state.update {
-                    it.copy(
-                        step = PaywallStep.EnteringPhone,
-                        error = "Your pass expired. Please purchase a new one.",
-                    )
+                    it.copy(step = PaywallStep.Confirming, error = "Your pass expired. Please purchase a new one.")
                 }
-                is AccessResult.NotPurchased -> _state.update { it.copy(step = PaywallStep.EnteringPhone) }
+                is AccessResult.NotPurchased -> _state.update { it.copy(step = PaywallStep.Confirming) }
                 is AccessResult.Error -> _state.update {
-                    it.copy(
-                        step = PaywallStep.EnteringPhone,
-                        error = result.exception.message,
-                    )
+                    it.copy(step = PaywallStep.Confirming, error = result.exception.message)
                 }
             }
         }
     }
+
+    // ── OTP login (first-time users only) ────────────────────────────────────
 
     fun requestOtp() {
         val phone = _state.value.phoneNumber.trim().ifBlank { return }
@@ -85,14 +105,14 @@ internal class PaywallViewModel(
         }
     }
 
+    // ── Purchase ─────────────────────────────────────────────────────────────
+
     fun confirmAndPay() {
         val s = _state.value
         viewModelScope.launch {
-            // 1. Simulate payment processing delay
             _state.update { it.copy(step = PaywallStep.ProcessingPayment, error = null) }
             delay(2_600)
 
-            // 2. Issue the pass
             _state.update { it.copy(step = PaywallStep.Issuing) }
             val passDto = runCatching {
                 client.service.issuePass(
@@ -111,7 +131,6 @@ internal class PaywallViewModel(
 
             store.savePass(content.id, passDto.token)
 
-            // 3. Poll until the pass is confirmed active (up to 5 × 700ms)
             _state.update { it.copy(step = PaywallStep.Polling) }
             repeat(5) { attempt ->
                 delay(700)
@@ -120,12 +139,16 @@ internal class PaywallViewModel(
                 }.getOrDefault(false)
                 if (valid || attempt == 4) {
                     store.saveValidationTime(content.id, System.currentTimeMillis())
-                    _state.update { it.copy(step = PaywallStep.AccessGranted) }
-                    onAccessGranted(passDto.toGrant())
+                    _state.update { it.copy(step = PaywallStep.AccessGranted, issuedGrant = passDto.toGrant()) }
                     return@launch
                 }
             }
         }
+    }
+
+    /** Called when the user taps "Watch Now" on the AccessGrantedPanel. */
+    fun watchContent() {
+        _state.value.issuedGrant?.let { onAccessGranted(it) }
     }
 
     class Factory(
@@ -134,12 +157,13 @@ internal class PaywallViewModel(
         private val client: MatchPassClient,
         private val context: Context,
         private val onAccessGranted: (MatchPassGrant) -> Unit,
+        private val userPhone: String? = null,
     ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
             val store = MatchPassStore(context)
             val checker = AccessChecker(config, client.service, store)
-            return PaywallViewModel(config, content, client, store, checker, onAccessGranted) as T
+            return PaywallViewModel(config, content, client, store, checker, onAccessGranted, userPhone) as T
         }
     }
 }

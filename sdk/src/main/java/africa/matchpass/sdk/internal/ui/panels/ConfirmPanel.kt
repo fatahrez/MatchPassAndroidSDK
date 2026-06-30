@@ -30,12 +30,18 @@ internal fun ConfirmPanel(
     content: MatchPassContent,
     state: PaywallState,
     onConfirm: () -> Unit,
+    onChangePhone: () -> Unit,
     onDismiss: () -> Unit,
 ) {
     OverlayCard {
         MatchPassBadge()
         Spacer(Modifier.height(16.dp))
-        Text(text = "Confirm your purchase", color = SdkColors.text, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+        Text(
+            text = "Confirm your ${content.policy.passLabel}",
+            color = SdkColors.text,
+            fontSize = 18.sp,
+            fontWeight = FontWeight.Bold,
+        )
         Spacer(Modifier.height(16.dp))
         Row(
             modifier = Modifier
@@ -48,19 +54,34 @@ internal fun ConfirmPanel(
         ) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(text = content.title, color = SdkColors.text, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
-                Text(text = "${content.durationHours}h access", color = SdkColors.textSecondary, fontSize = 12.sp)
+                Text(
+                    text = "${content.durationHours}h access · ${content.policy.passLabel}",
+                    color = SdkColors.textSecondary,
+                    fontSize = 12.sp,
+                )
             }
             Spacer(Modifier.width(12.dp))
             Text(text = content.priceLabel(), color = SdkColors.gold, fontSize = 18.sp, fontWeight = FontWeight.Black)
         }
-        Spacer(Modifier.height(8.dp))
-        Text(
-            text = "Charged to ${state.phoneNumber}",
-            color = SdkColors.textSecondary,
-            fontSize = 11.sp,
-        )
-        state.error?.let { Text(text = it, color = SdkColors.error, fontSize = 12.sp, modifier = Modifier.padding(top = 6.dp)) }
-        Spacer(Modifier.height(16.dp))
+        Spacer(Modifier.height(10.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = "Paying as ${state.phoneNumber}",
+                color = SdkColors.textSecondary,
+                fontSize = 11.sp,
+            )
+            TextButton(onClick = onChangePhone) {
+                Text("Change", color = SdkColors.blue, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+            }
+        }
+        state.error?.let {
+            Text(text = it, color = SdkColors.error, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp))
+        }
+        Spacer(Modifier.height(14.dp))
         Button(
             onClick = onConfirm,
             modifier = Modifier.fillMaxWidth().height(52.dp),

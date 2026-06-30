@@ -18,9 +18,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
-import africa.matchpass.sdk.MatchPassConfig
 import africa.matchpass.sdk.MatchPassContent
 import africa.matchpass.sdk.MatchPassGrant
+import africa.matchpass.sdk.MatchPassSDK
 import africa.matchpass.sdk.internal.MatchPassClient
 import africa.matchpass.sdk.internal.ui.panels.AccessGrantedPanel
 import africa.matchpass.sdk.internal.ui.panels.ConfirmPanel
@@ -35,21 +35,21 @@ internal fun PaywallScreen(
     client: MatchPassClient,
     onAccessGranted: (MatchPassGrant) -> Unit,
     onDismiss: () -> Unit,
+    /** Pre-authenticated phone — skips OTP if provided. */
+    userPhone: String? = null,
 ) {
     val context = LocalContext.current
-    val config = africa.matchpass.sdk.MatchPassSDK.config
+    val config = MatchPassSDK.config
     val vm: PaywallViewModel = viewModel(
-        factory = PaywallViewModel.Factory(config, content, client, context, onAccessGranted)
+        factory = PaywallViewModel.Factory(config, content, client, context, onAccessGranted, userPhone)
     )
     val state by vm.state.collectAsState()
 
-    // Check for a stored pass as soon as the paywall opens
     LaunchedEffect(content.id) {
-        vm.checkExistingPass()
+        vm.onStart()
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
-        // Background thumbnail
         content.thumbnailUrl?.let { url ->
             AsyncImage(
                 model = url,
@@ -73,27 +73,28 @@ internal fun PaywallScreen(
             verticalArrangement = Arrangement.Bottom,
         ) {
             when (state.step) {
-                PaywallStep.Resuming -> IssuingPanel("Checking your pass...")
-                PaywallStep.Issuing -> IssuingPanel("Activating your pass...")
-                PaywallStep.Polling -> IssuingPanel("Confirming access...")
+                PaywallStep.Resuming          -> IssuingPanel("Checking your pass...")
+                PaywallStep.Issuing           -> IssuingPanel("Activating your pass...")
+                PaywallStep.Polling           -> IssuingPanel("Confirming access...")
                 PaywallStep.ProcessingPayment -> PaymentPanel(content = content, state = state)
-                PaywallStep.AccessGranted -> AccessGrantedPanel(
+                PaywallStep.AccessGranted     -> AccessGrantedPanel(
                     content = content,
-                    onWatch = { onAccessGranted(MatchPassGrant("", content.id, "")) },
+                    onWatch = vm::watchContent,
                 )
-                PaywallStep.Confirming -> ConfirmPanel(
+                PaywallStep.Confirming        -> ConfirmPanel(
                     content = content,
                     state = state,
                     onConfirm = vm::confirmAndPay,
+                    onChangePhone = vm::changePhone,
                     onDismiss = onDismiss,
                 )
-                PaywallStep.AwaitingOtp -> OtpPanel(
+                PaywallStep.AwaitingOtp       -> OtpPanel(
                     state = state,
                     onOtpChange = vm::setOtp,
                     onVerify = vm::verifyOtp,
                     onDismiss = onDismiss,
                 )
-                PaywallStep.EnteringPhone -> PhonePanel(
+                PaywallStep.EnteringPhone     -> PhonePanel(
                     content = content,
                     state = state,
                     onPhoneChange = vm::setPhone,

@@ -1,5 +1,7 @@
 package africa.matchpass.sdk.internal.ui
 
+import africa.matchpass.sdk.MatchPassGrant
+
 internal enum class PaywallStep {
     Resuming,
     EnteringPhone,
@@ -17,4 +19,5 @@ internal data class PaywallState(
     val otpCode: String = "",
     val demoOtp: String? = null,
     val error: String? = null,
+    val issuedGrant: MatchPassGrant? = null,
 )
