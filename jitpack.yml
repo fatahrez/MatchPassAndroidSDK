@@ -1,4 +1,4 @@
 before_install:
   - echo sdk.dir=$ANDROID_HOME > local.properties
 install:
-  - ./gradlew :sdk:assembleRelease
+  - ./gradlew :sdk:publishReleasePublicationToMavenLocal
