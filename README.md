@@ -1,3 +1,5 @@
+[![](https://jitpack.io/v/fatahrez/MatchPassAndroidSDK.svg)](https://jitpack.io/#fatahrez/MatchPassAndroidSDK)
+
 # MatchPass Android SDK
 
 Pay-per-view passes for streaming platforms — powered by M-Pesa.
