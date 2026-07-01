@@ -67,8 +67,7 @@ dependencies {
     implementation("com.github.fatahrez:MatchPassAndroidSDK:1.0.0-beta01")
 }
 ```
-
-> Replace `YOUR_GITHUB_USERNAME` with the GitHub account that owns this repo.  
+  
 > The version string must match a git tag on the repo.
 
 ### Local / evaluation setup
