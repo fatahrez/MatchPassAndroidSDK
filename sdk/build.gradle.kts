@@ -2,7 +2,6 @@ plugins {
     alias(libs.plugins.android.library)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
-    `maven-publish`
 }
 
 android {
@@ -39,11 +38,6 @@ android {
         compose = true
     }
 
-    publishing {
-        singleVariant("release") {
-            withSourcesJar()
-        }
-    }
 }
 
 dependencies {
@@ -67,17 +61,4 @@ dependencies {
     testImplementation(libs.robolectric)
     testImplementation(libs.androidx.test.core)
     androidTestImplementation(libs.junit.ext)
-}
-
-publishing {
-    publications {
-        create<MavenPublication>("release") {
-            groupId = "africa.matchpass"
-            artifactId = "sdk"
-            version = "1.0.0-beta01"
-            afterEvaluate {
-                from(components["release"])
-            }
-        }
-    }
 }
