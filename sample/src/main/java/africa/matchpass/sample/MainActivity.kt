@@ -476,7 +476,7 @@ private fun FeaturedHero(content: SampleContent, hasAccess: Boolean, onClick: (S
                 } else {
                     Icon(Icons.Default.Lock, contentDescription = null, modifier = Modifier.size(14.dp), tint = Color(0xFF0d0d0d))
                     Spacer(Modifier.width(4.dp))
-                    Text("ZAR ${content.passContent.price} · Get Pass", fontWeight = FontWeight.Black, fontSize = 13.sp, color = Color(0xFF0d0d0d))
+                    Text("${content.passContent.currency} ${content.passContent.price} · Get Pass", fontWeight = FontWeight.Black, fontSize = 13.sp, color = Color(0xFF0d0d0d))
                 }
             }
         }
