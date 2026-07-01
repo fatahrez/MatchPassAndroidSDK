@@ -65,9 +65,9 @@ class MainActivity : ComponentActivity() {
 }
 
 // ── Colour palette ─────────────────────────────────────────────────────────────
-private val BgDark   = Color(0xFF0B0F14)
-private val Surface  = Color(0xFF161B26)
-private val Brand    = Color(0xFF0057FF)
+internal val BgDark   = Color(0xFF0B0F14)
+internal val Surface  = Color(0xFF161B26)
+internal val Brand    = Color(0xFF0057FF)
 private val Gold     = Color(0xFFFFC300)
 private val LiveRed  = Color(0xFFE53935)
 private val TextMain = Color(0xFFFFFFFF)
@@ -76,19 +76,22 @@ private val Scrim    = Color(0x99000000)
 
 // ── Root composable ────────────────────────────────────────────────────────────
 //
-// Browse-first flow: users land on the home screen immediately, no mandatory
-// login gate. If a phone was verified in a previous session it's restored so
-// pass-restore and "already-purchased" detection work automatically.
-// The MatchPass paywall handles phone + OTP inline when a user taps locked
-// content — operators never need to build their own payment or auth UI.
+// State machine:
+//   isChecking = true          → brief spinner while reading stored session
+//   sessionPhone = null        → no session → show operator login screen
+//   sessionPhone = "0712..."   → verified session → go straight to home
+//
+// Demo path:  demo / play → MatchPassSDK.setPhone() → home (OTP skipped)
+// Real path:  "Login with phone" → MatchPassSDK.Login() OTP → home
+//
+// Both paths require the SDK. Comment out the SDK and neither compiles.
 
 @Composable
 fun StreamingApp() {
     val context = LocalContext.current
 
-    // null = still reading storage, "" = no verified phone, "..." = verified phone
-    var sessionPhone by remember { mutableStateOf<String?>(null) }
     var isChecking   by remember { mutableStateOf(true) }
+    var sessionPhone by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(Unit) {
         sessionPhone = MatchPassSDK.getStoredPhone(context)
@@ -102,14 +105,22 @@ fun StreamingApp() {
                     CircularProgressIndicator(color = Brand, strokeWidth = 3.dp)
                 }
             }
+
+            // No stored session → show the operator's own login screen
+            sessionPhone == null -> {
+                LoginScreen(
+                    onLoggedIn = { phone -> sessionPhone = phone },
+                )
+            }
+
+            // Session exists → home screen
             else -> {
-                // Go straight to home — no login gate
                 HomeContent(
-                    loggedInPhone = sessionPhone?.ifBlank { null },
+                    loggedInPhone = sessionPhone!!.ifBlank { null },
                     onPhoneVerified = { phone -> sessionPhone = phone },
                     onSignOut = {
                         MatchPassSDK.signOut(context)
-                        sessionPhone = ""
+                        sessionPhone = null   // back to login screen
                     },
                 )
             }

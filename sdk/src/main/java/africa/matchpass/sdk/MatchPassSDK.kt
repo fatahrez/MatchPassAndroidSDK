@@ -178,6 +178,21 @@ object MatchPassSDK {
     }
 
     /**
+     * Marks a phone number as verified without going through OTP.
+     *
+     * Intended for operators who authenticate users through their own system and want
+     * to hand a verified phone to MatchPass so the paywall can skip its own OTP step.
+     * Also useful during demos and testing.
+     *
+     * In production you should only call this with a phone you have already verified
+     * through your own auth stack.
+     */
+    fun setPhone(context: Context, phone: String) {
+        checkInitialised()
+        MatchPassStore(context).savePhone(phone)
+    }
+
+    /**
      * Returns the epoch-millisecond timestamp at which the pass for [contentId] expires,
      * or `null` if no pass is stored or the expiry was never recorded.
      *
