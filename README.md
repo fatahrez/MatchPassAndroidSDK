@@ -1,49 +1,52 @@
 # MatchPass Android SDK
 
-Pay-per-view access infrastructure for Android apps.  
-Drop in one composable. MatchPass handles OTP auth, pass issuance, entitlement validation, and local persistence — your app just receives a token and starts the stream.
+Pay-per-view passes for streaming platforms — powered by M-Pesa.
+
+Add one composable. MatchPass handles phone verification, M-Pesa STK Push payment, pass issuing, and access validation. Users pay with one tap. No subscription required.
 
 ---
 
 ## How it works
 
 ```
-Your app                      MatchPass SDK                    MatchPass API
-────────                      ─────────────                    ─────────────
-User taps Watch ──────────▶  checkAccess(content)
-                              ├─ cached, fresh ──────────────▶  (skipped)
-                              └─ stale / no pass ────────────▶  /passes/validate
-
-No pass found or expired:
-                              Show phone entry UI
-                              User enters number ──────────────▶ /guests/otp/request
-                              Show OTP entry UI
-                              User enters code ────────────────▶ /guests/otp/verify
-                              Show confirm screen
-                              User confirms ───────────────────▶ /passes/issue
-                              Poll until active ───────────────▶ /passes/validate
-                ◀─────────── onAccessGranted(grant)
-Start stream ◀──────────────  (grant.token → your backend)
+User taps locked content
+        │
+        ▼
+MatchPassSDK.Paywall()
+        │
+        ├─ Existing pass? ──────────────────────► onAccessGranted (no UI shown)
+        │
+        ├─ Phone known? ─── Yes ───────────────► Confirm screen
+        │                                              │
+        │                    No                        ▼
+        │                    │                  M-Pesa STK Push sent
+        │                    ▼                         │
+        │              Phone entry                     ▼
+        │                    │                  User enters PIN on phone
+        │                    ▼                         │
+        │              OTP verification                ▼
+        │                                       Pass issued automatically
+        │                                             │
+        └─────────────────────────────────────────────▼
+                                              onAccessGranted(grant)
 ```
-
-The entire purchase flow is contained in a single composable: `MatchPassSDK.Paywall(...)`.  
-On subsequent opens, the stored pass is validated according to the content's [PassPolicy](#passpolicy) — live content is re-validated frequently, owned content is trusted from cache.
 
 ---
 
 ## Requirements
 
-- Android minSdk 24
-- Jetpack Compose (BOM 2024.09.00 or later)
-- Kotlin 2.0+
+| | Minimum |
+|---|---|
+| Android | API 24 (Android 7.0) |
+| Kotlin | 1.9+ |
+| Jetpack Compose BOM | 2024.09.00+ |
+| compileSdk | 35 |
 
 ---
 
 ## Installation
 
-### JitPack
-
-Add JitPack to your project-level `settings.gradle.kts`:
+### 1. Add JitPack to `settings.gradle.kts`
 
 ```kotlin
 dependencyResolutionManagement {
@@ -55,26 +58,29 @@ dependencyResolutionManagement {
 }
 ```
 
-Add the dependency to your app module:
+### 2. Add the dependency
 
 ```kotlin
 dependencies {
-    implementation("com.github.MatchPassAfrica:MatchPassAndroidSDK:1.0.0")
+    implementation("com.github.YOUR_GITHUB_USERNAME:MatchPassAndroidSDK:1.0.0-beta01")
 }
 ```
 
-### Local (development / evaluation)
+> Replace `YOUR_GITHUB_USERNAME` with the GitHub account that owns this repo.  
+> The version string must match a git tag on the repo.
 
-Clone this repo alongside your project, then add it as a module in `settings.gradle.kts`:
+### Local / evaluation setup
+
+Clone this repo alongside your project and include it as a module:
 
 ```kotlin
+// settings.gradle.kts
 include(":matchpass-sdk")
 project(":matchpass-sdk").projectDir = File("../MatchPassAndroidSDK/sdk")
 ```
 
-Then depend on it:
-
 ```kotlin
+// app/build.gradle.kts
 dependencies {
     implementation(project(":matchpass-sdk"))
 }
@@ -84,329 +90,185 @@ dependencies {
 
 ## Setup
 
-Initialise the SDK once in your `Application.onCreate()`:
+Initialise once in `Application.onCreate()`:
 
 ```kotlin
 class MyApp : Application() {
     override fun onCreate() {
         super.onCreate()
-
-        // Option A — Builder (recommended, discoverable)
         MatchPassSDK.Builder(this)
-            .apiKey("your-operator-api-key")      // from the MatchPass dashboard
-            .baseUrl("https://api.matchpass.africa/api/v1/")
+            .apiKey("YOUR_API_KEY")       // from the MatchPass operator dashboard
             .debug(BuildConfig.DEBUG)
             .initialize()
-
-        // Option B — direct init
-        MatchPassSDK.init(
-            context = this,
-            config  = MatchPassConfig(apiKey = "your-operator-api-key"),
-        )
     }
 }
 ```
 
-`init()` and `Builder.initialize()` are idempotent — safe to call more than once.
-
----
-
-## Content types
-
-Every piece of content has a `ContentType` that tells the SDK how to behave.
-Set it once on `MatchPassContent` — the SDK handles validation frequency, UI copy, and caching automatically.
-
-| Type | Business model | Pass label | Re-validation | Rewatch |
-|------|---------------|-----------|--------------|---------|
-| `MATCH` | One game, short window | "Game Pass" | Every 5 min | No |
-| `CHANNEL` | Live channel access | "Channel Pass" | Every 60 s | No |
-| `SEASON` | Season ownership | "Season Pass" | Once per 24 h | Yes |
-| `MOVIE` | Perpetual ownership | "Own it" | Once per 30 days | Yes |
-
-```kotlin
-// Game pass — expires after match window
-MatchPassContent(
-    id           = "epl-match-001",
-    title        = "Arsenal vs Manchester City",
-    price        = "29.00",
-    contentType  = ContentType.MATCH,
-)
-
-// Live channel — tight re-validation
-MatchPassContent(
-    id           = "supersport-1",
-    title        = "SuperSport 1",
-    price        = "15.00",
-    durationHours = 4,
-    contentType  = ContentType.CHANNEL,
-)
-
-// Season ownership — rewatch freely
-MatchPassContent(
-    id           = "shaka-ilembe-s1",
-    title        = "Shaka Ilembe Season 1",
-    price        = "59.00",
-    durationHours = 720,                // 30 days
-    contentType  = ContentType.SEASON,
-)
-
-// Movie — own it forever
-MatchPassContent(
-    id           = "movie-001",
-    title        = "The Woman King",
-    price        = "35.00",
-    contentType  = ContentType.MOVIE,
-)
-```
-
-### Custom policy
-
-Override cache TTL or any other policy parameter per content:
-
-```kotlin
-MatchPassContent(
-    id          = "boxing-event",
-    title       = "Riyadh Season Boxing",
-    price       = "49.00",
-    contentType = ContentType.MATCH,
-    policy      = PassPolicy.MATCH.copy(cacheTtlSeconds = 10 * 60L),  // 10-min cache
-)
-```
+Get your API key at [dashboard.matchpass.africa](https://dashboard.matchpass.africa) — it is generated when you register and shown once.
 
 ---
 
 ## Show the paywall
 
 ```kotlin
-@Composable
-fun ContentScreen(content: MatchPassContent, onStartStream: (token: String) -> Unit) {
-    var showPaywall by remember { mutableStateOf(false) }
-
-    if (showPaywall) {
-        MatchPassSDK.Paywall(
-            content         = content,
-            onAccessGranted = { grant ->
-                showPaywall = false
-                onStartStream(grant.token)  // pass token to your streaming backend
-            },
-            onDismiss = { showPaywall = false },
-        )
-    } else {
-        WatchButton(onClick = { showPaywall = true })
-    }
+// In your composable — show when a user taps locked content
+if (showPaywall) {
+    MatchPassSDK.Paywall(
+        content   = MatchPassContent(
+            id            = "arsenalmancity01jul26",
+            title         = "Arsenal vs Manchester City",
+            price         = "299",
+            currency      = "KSh",
+            durationHours = 4,
+            contentType   = ContentType.MATCH,
+        ),
+        userPhone = loggedInPhone,      // null → SDK will ask; non-null → skips OTP
+        onAccessGranted = { grant ->
+            showPaywall = false
+            startStream(grant.token)    // present this token to your streaming backend
+        },
+        onDismiss = { showPaywall = false },
+    )
 }
 ```
 
-The paywall is self-managing:
-- **First open** — runs the full OTP → payment → issuance flow.
-- **Returning user** — validates the stored pass (cache-aware per `ContentType`). If still valid, `onAccessGranted` fires immediately with no UI shown.
-- **Expired pass** — clears local storage, shows an error, restarts the purchase flow.
+The paywall is fully self-contained. It handles:
+- Phone entry and OTP verification (skipped if `userPhone` is provided)
+- M-Pesa STK Push — user receives a prompt on their phone and enters their PIN
+- Pass issuing and local storage
+- Restoring a previously purchased pass after reinstall or device switch
 
 ---
 
-## Check access without UI
+## Check access (no UI)
 
-Use `checkAccess()` to gate UI elements or decide whether to show a "Resume" button:
+Use this to decide whether to show a play button or a lock icon on content cards:
 
 ```kotlin
 LaunchedEffect(content.id) {
     when (val result = MatchPassSDK.checkAccess(context, content)) {
-        is AccessResult.Granted      -> showResumeButton(result.grant)
-        is AccessResult.Expired      -> showRenewalBadge()
-        is AccessResult.NotPurchased -> showWatchButton()
-        is AccessResult.Error        -> showWatchButton()  // fail open on network errors
+        is AccessResult.Granted      -> showPlayButton(result.grant.token)
+        is AccessResult.Expired      -> showRenewButton()
+        is AccessResult.NotPurchased -> showLockIcon()
+        is AccessResult.Error        -> showLockIcon()  // fail closed on errors
     }
 }
 ```
 
-`checkAccess()` respects the `PassPolicy` cache TTL — for `MOVIE` content this returns
-`Granted` from local cache for up to 30 days without a server round-trip.
+`checkAccess()` respects the content's cache TTL — for `MOVIE` it trusts local storage for up to 30 days without a server round-trip.
 
 ---
 
-## Lock content (gating)
+## Optional: phone login composable
 
-Show a lock indicator on content the user hasn't purchased:
+Show a standalone phone-verification screen before users browse content. Once verified, `Paywall()` calls skip OTP automatically.
 
 ```kotlin
-@Composable
-fun ContentCard(content: MatchPassContent) {
-    var isLocked by remember { mutableStateOf(true) }
-
-    LaunchedEffect(content.id) {
-        isLocked = MatchPassSDK.checkAccess(context, content) !is AccessResult.Granted
-    }
-
-    Box {
-        Thumbnail(content.thumbnailUrl)
-        if (isLocked) LockBadge(price = "${content.currency} ${content.price}")
-    }
-}
+MatchPassSDK.Login(
+    onLoggedIn = { phone -> sessionPhone = phone },
+    onSkip     = { /* user dismissed */ },
+)
 ```
 
 ---
 
-## API reference
+## Optional: set phone from your own auth
 
-### `MatchPassSDK.Builder`
+If your app has its own login system and already has a verified phone, pass it to MatchPass so the paywall skips its OTP step:
 
-| Method | Description |
-|--------|-------------|
-| `apiKey(String)` | Required. Your operator API key. |
-| `baseUrl(String)` | Optional. Override for staging. Default: `https://api.matchpass.africa/api/v1/`. |
-| `debug(Boolean)` | Optional. Enables OkHttp request/response logging. |
-| `initialize()` | Applies configuration and initialises the SDK. |
-
----
-
-### `MatchPassConfig`
-
-| Parameter | Type | Required | Default | Description |
-|-----------|------|----------|---------|-------------|
-| `apiKey` | `String` | ✓ | — | Your operator API key from the MatchPass dashboard |
-| `baseUrl` | `String` | | `https://api.matchpass.africa/api/v1/` | Override for staging or self-hosted |
-| `debug` | `Boolean` | | `false` | Enables full OkHttp request/response logging |
-
----
-
-### `MatchPassContent`
-
-| Parameter | Type | Required | Default | Description |
-|-----------|------|----------|---------|-------------|
-| `id` | `String` | ✓ | — | Must match the `external_id` registered in the MatchPass dashboard. Mismatch → HTTP 400. |
-| `title` | `String` | ✓ | — | Displayed on the paywall confirm screen |
-| `price` | `String` | ✓ | — | Amount as decimal string, e.g. `"29.00"` |
-| `currency` | `String` | | `"ZAR"` | ISO 4217 code |
-| `durationHours` | `Int` | | `4` | How long the pass grants access (shown on confirm screen) |
-| `thumbnailUrl` | `String?` | | `null` | Background image shown behind the paywall panels |
-| `contentType` | `ContentType` | | `MATCH` | Semantic type — SDK derives `policy` automatically |
-| `policy` | `PassPolicy` | | `PassPolicy.forType(contentType)` | Override to customise cache TTL or UI copy |
-
----
-
-### `ContentType`
-
-| Value | Description |
-|-------|-------------|
-| `MATCH` | Single live event — game pass, short window |
-| `CHANNEL` | Live broadcast channel — time-limited access |
-| `SEASON` | TV season ownership — rewatch freely |
-| `MOVIE` | Movie — own it permanently |
-
----
-
-### `PassPolicy`
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `cacheTtlSeconds` | `Long` | How long the SDK trusts a cached validation before re-checking with the server |
-| `allowRewatch` | `Boolean` | Whether the user can return to the content after the first session |
-| `showCountdown` | `Boolean` | Whether to show "X hours remaining" on the access-granted screen |
-| `passLabel` | `String` | Label shown on the confirm screen, e.g. "Game Pass", "Own it" |
-
-Presets: `PassPolicy.MATCH`, `PassPolicy.CHANNEL`, `PassPolicy.SEASON`, `PassPolicy.MOVIE`.
-
----
-
-### `AccessResult`
-
-| Subtype | Fields | When returned |
-|---------|--------|---------------|
-| `Granted` | `grant: MatchPassGrant` | Valid pass found (local cache or server) |
-| `Expired` | `expiredAt: String` | Pass found but past expiry |
-| `NotPurchased` | — | No pass stored |
-| `Error` | `exception: MatchPassException` | Network or server error |
-
-On `Error`, the stored pass is **not** cleared — the SDK fails open so a transient network issue doesn't lock out a paying user.
-
----
-
-### `MatchPassGrant`
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `token` | `String` | Present this to your streaming backend to authorise playback |
-| `contentId` | `String` | The `id` from the `MatchPassContent` you passed in |
-| `expiresAt` | `String` | ISO 8601 expiry timestamp |
-
----
-
-### `MatchPassException`
-
-All SDK errors are subtypes of `MatchPassException`:
-
-| Subtype | Meaning |
-|---------|---------|
-| `NotInitialized` | `init()` was not called before use |
-| `ContentNotFound` | `content.id` doesn't match any registered content |
-| `InvalidOtp` | OTP code was wrong |
-| `OtpExpired` | OTP expired before the user submitted it |
-| `PassExpired` | The pass exists but is past its expiry date |
-| `PassRevoked` | The pass was revoked by the operator |
-| `NetworkError` | An `IOException` occurred |
-| `ServerError` | Unexpected HTTP error from the API |
-| `ConfigurationError` | SDK misconfiguration (missing API key, etc.) |
-
----
-
-## Paywall flow
-
-```
-EnteringPhone
-     │  User submits phone number
-     ▼
-AwaitingOtp       ← OTP sent to user's phone (SMS)
-     │  User submits 6-digit code
-     ▼
-Confirming        ← Shows content title, price, duration, pass type
-     │  User confirms
-     ▼
-ProcessingPayment ← Payment deducted
-     │
-     ▼
-Issuing           ← POST /passes/issue
-     │
-     ▼
-Polling           ← GET /passes/validate (polls until active)
-     │
-     ▼
-AccessGranted     ← onAccessGranted(grant) fires
-```
-
-**Returning user** (existing valid pass):
-
-```
-Paywall composable mounted
-     │  stored token found
-     ▼
-Resuming          ← AccessChecker.check() (cache or server)
-     │  valid
-     ▼
-onAccessGranted fires immediately (no UI shown)
+```kotlin
+// After your own login succeeds
+MatchPassSDK.setPhone(context, verifiedPhone)
 ```
 
 ---
 
-## Demo / sandbox mode
+## Session management
 
-When `debug = true` and the server is running in demo mode, the OTP is returned in the API response and displayed as a gold hint card above the OTP input. No real SMS is sent.
+```kotlin
+// Returns the verified phone stored on this device, or null if not logged in
+val phone: String? = MatchPassSDK.getStoredPhone(context)
 
-For local development against the MatchPass API on your machine:
+// Clear the session — does NOT revoke passes
+MatchPassSDK.signOut(context)
+
+// Epoch-millisecond expiry for a content pass (for scheduling UI re-checks)
+val expiresAt: Long? = MatchPassSDK.getExpiresAt(context, contentId)
+```
+
+---
+
+## Content types
+
+| `ContentType` | Use case | Cache TTL | Pass label |
+|---|---|---|---|
+| `MATCH` | Live sport, single event | 5 min | Game Pass |
+| `CHANNEL` | Live channel, time-limited | 60 s | Channel Pass |
+| `SEASON` | Full TV season, rewatch | 24 h | Season Pass |
+| `MOVIE` | Movie, own permanently | 30 days | Own it |
+
+The SDK picks the right validation frequency and UI copy automatically from `ContentType`.
+
+Override for full control:
+
+```kotlin
+MatchPassContent(
+    id     = "boxing-ppv-05jul26",
+    policy = PassPolicy(
+        cacheTtlSeconds = 2 * 60L,
+        allowRewatch    = false,
+        showCountdown   = true,
+        passLabel       = "PPV Pass",
+    ),
+)
+```
+
+---
+
+## Content IDs
+
+Use human-readable, date-stamped IDs for live events. This ensures the same fixture in a future season gets a new ID and a fresh pass.
+
+```kotlin
+// ✅ Recommended — unique per fixture and date
+id = "arsenalmancity01jul26"
+id = "chiefspirates03jul26"
+id = "boxing-riyadhseason05jul26"
+
+// ✅ Channels and series — stable IDs (content repeats)
+id = "ch-supersport1"
+id = "series-shaka-ilembe-s1"
+
+// ❌ Avoid — generic IDs cause pass collisions across seasons
+id = "match-001"
+```
+
+---
+
+## Pass restore
+
+When a user reinstalls or switches devices, the SDK automatically checks the server for an existing active pass before showing the paywall. If found, `onAccessGranted` fires silently — no re-purchase.
+
+This works automatically when the user's phone is known (set via `setPhone()` or after a previous OTP login).
+
+---
+
+## Debug / local development
 
 ```kotlin
 MatchPassSDK.Builder(this)
-    .apiKey("your-demo-operator-key")
-    .baseUrl("http://10.0.2.2:8002/api/v1/")  // emulator → host localhost
-    .debug(true)
+    .apiKey("your-staging-key")
+    .baseUrl("http://10.0.2.2:8000/api/v1/")  // emulator → host machine
+    .debug(true)                                // enables OkHttp logging
     .initialize()
 ```
 
-Add cleartext permission to `AndroidManifest.xml`:
+In `debug` mode, the OTP code is displayed as a hint on screen — no real SMS is sent to your staging server.
+
+Add cleartext traffic permission for local development in `AndroidManifest.xml`:
 
 ```xml
-<application
-    android:networkSecurityConfig="@xml/network_security_config"
-    ...>
+<application android:networkSecurityConfig="@xml/network_security_config">
 ```
 
 `res/xml/network_security_config.xml`:
@@ -421,40 +283,73 @@ Add cleartext permission to `AndroidManifest.xml`:
 
 ---
 
-## Testing your integration
+## API reference
 
-Run the SDK's own test suite:
+### `MatchPassSDK`
+
+| Method | Returns | Description |
+|---|---|---|
+| `init(context, config)` | `Unit` | Initialise the SDK. Call once from `Application.onCreate()`. |
+| `Builder(context)` | `Builder` | Fluent alternative to `init()`. |
+| `Paywall(...)` | `Unit` *(Composable)* | Show the purchase flow. |
+| `Login(...)` | `Unit` *(Composable)* | Standalone phone OTP login screen. |
+| `checkAccess(context, content)` | `AccessResult` | Validate access without UI. Suspend function. |
+| `setPhone(context, phone)` | `Unit` | Pre-set a verified phone (from your own auth). |
+| `getStoredPhone(context)` | `String?` | Read the verified phone stored on device. |
+| `signOut(context)` | `Unit` | Clear the session. |
+| `getExpiresAt(context, contentId)` | `Long?` | Epoch-ms expiry for a content pass. |
+
+### `AccessResult`
+
+| Subtype | Fields | Meaning |
+|---|---|---|
+| `Granted` | `grant: MatchPassGrant` | Valid pass — start the stream |
+| `Expired` | `expiredAt: String` | Pass found but expired — show renewal |
+| `NotPurchased` | — | No pass — show paywall |
+| `Error` | `exception: MatchPassException` | Network/server error — fail closed |
+
+### `MatchPassGrant`
+
+| Field | Type | Description |
+|---|---|---|
+| `token` | `String` | Present to your streaming backend to authorise playback |
+| `contentId` | `String` | Matches the `id` you passed in `MatchPassContent` |
+| `expiresAt` | `String` | ISO 8601 expiry timestamp |
+
+---
+
+## Publishing (JitPack)
+
+Tag a release and push — JitPack builds on first request:
+
+```bash
+git tag 1.0.0-beta01
+git push origin 1.0.0-beta01
+```
+
+Then open `https://jitpack.io/#YOUR_USERNAME/MatchPassAndroidSDK` and click **Get it** to pre-build.
+
+### Private distribution options
+
+| Option | Cost | How |
+|---|---|---|
+| JitPack Pro | ~$14/month | Private repo supported on paid plan |
+| GitHub Packages | Free | Publish to `maven.pkg.github.com` — operators use a read-only token |
+| Direct AAR | Free | Attach `.aar` to a GitHub Release; operators add as a local dep |
+
+---
+
+## Running tests
 
 ```bash
 ./gradlew :sdk:test
 ```
 
-Tests cover:
-- `PassPolicyTest` — content type → policy mapping, cache TTL ordering
-- `AccessCheckerTest` — cache hit/miss logic, server validation, error handling per content type
-- `PaywallViewModelTest` — full state machine (EnteringPhone → AccessGranted)
-- `MatchPassStoreTest` — pass persistence and validation timestamp isolation
-
----
-
-## What the SDK does NOT do
-
-- **Payment processing** — MatchPass issues entitlements. In the demo, the payment step is simulated. In production, your payment provider calls `/passes/issue` after a successful charge webhook.
-- **Video playback** — the SDK returns a token. Your app passes it to your streaming backend and starts the player.
-- **User accounts** — MatchPass identifies users by OTP-verified phone number only. No accounts, no passwords.
-
----
-
-## Versioning
-
-| Version | Notes |
-|---------|-------|
-| 1.0.0 | Content type system (`ContentType`, `PassPolicy`), typed errors (`MatchPassException`), `AccessResult`, `Builder`, `checkAccess()`, unit test suite |
-| 0.1.0 | Initial release — OTP auth, pass issuance, local persistence, Compose paywall |
+Covers: `PassPolicy`, `AccessChecker`, `PaywallViewModel` state machine, `MatchPassStore`.
 
 ---
 
 ## License
 
-Private — © MatchPass Africa. All rights reserved.  
-Contact [hello@matchpass.africa](mailto:hello@matchpass.africa) for licensing and integration support.
+Copyright © 2026 MatchPass Africa. All rights reserved.  
+Contact [globalhcsolution@gmail.com](mailto:globalhcsolution@gmail.com) for licensing and operator onboarding.

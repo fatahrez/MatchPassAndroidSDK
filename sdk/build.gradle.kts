@@ -74,7 +74,7 @@ publishing {
         create<MavenPublication>("release") {
             groupId = "africa.matchpass"
             artifactId = "sdk"
-            version = "0.1.0"
+            version = "1.0.0-beta01"
             afterEvaluate {
                 from(components["release"])
             }

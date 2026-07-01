@@ -8,7 +8,7 @@ package africa.matchpass.sdk
  *                      MatchPass dashboard. A mismatch returns HTTP 400.
  * @param title         Human-readable title shown on the paywall.
  * @param price         Amount as a decimal string, e.g. "29.00".
- * @param currency      ISO 4217 currency code, e.g. "ZAR".
+ * @param currency      Currency code shown on the paywall, e.g. "KSh", "KES", "ZAR".
  * @param durationHours How long the pass grants access (shown on the confirm screen).
  * @param thumbnailUrl  Optional background image shown behind the paywall panels.
  * @param contentType   Semantic type — the SDK derives the [policy] from this automatically.
@@ -19,7 +19,7 @@ data class MatchPassContent(
     val id: String,
     val title: String,
     val price: String,
-    val currency: String = "ZAR",
+    val currency: String = "KES",
     val durationHours: Int = 4,
     val thumbnailUrl: String? = null,
     val contentType: ContentType = ContentType.MATCH,
