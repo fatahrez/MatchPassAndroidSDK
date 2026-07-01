@@ -62,7 +62,7 @@ dependencyResolutionManagement {
 
 ```kotlin
 dependencies {
-    implementation("com.github.YOUR_GITHUB_USERNAME:MatchPassAndroidSDK:1.0.0-beta01")
+    implementation("com.github.fatahrez:MatchPassAndroidSDK:1.0.0-beta01")
 }
 ```
 
