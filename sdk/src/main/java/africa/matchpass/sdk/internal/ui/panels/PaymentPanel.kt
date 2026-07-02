@@ -28,6 +28,9 @@ private val MpesaGreen = Color(0xFF4CAF50)
 
 @Composable
 internal fun PaymentPanel(content: MatchPassContent, state: PaywallState) {
+    // Show whichever phone will actually get the STK push
+    val stkPhone = state.paymentPhone ?: state.phoneNumber
+
     OverlayCard(horizontalAlignment = Alignment.CenterHorizontally) {
         MatchPassBadge()
         Spacer(Modifier.height(20.dp))
@@ -53,7 +56,7 @@ internal fun PaymentPanel(content: MatchPassContent, state: PaywallState) {
         )
         Spacer(Modifier.height(6.dp))
         Text(
-            text = "Enter your M-Pesa PIN on\n${state.phoneNumber} to complete payment",
+            text = "Enter your M-Pesa PIN on\n$stkPhone to complete payment",
             color = SdkColors.textSecondary,
             fontSize = 13.sp,
             textAlign = TextAlign.Center,

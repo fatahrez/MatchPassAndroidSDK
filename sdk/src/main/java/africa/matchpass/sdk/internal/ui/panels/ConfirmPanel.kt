@@ -30,9 +30,12 @@ internal fun ConfirmPanel(
     content: MatchPassContent,
     state: PaywallState,
     onConfirm: () -> Unit,
-    onChangePhone: () -> Unit,
+    onChangePaymentPhone: () -> Unit,
     onDismiss: () -> Unit,
 ) {
+    // The number that will actually receive the M-Pesa prompt
+    val stkPhone = state.paymentPhone ?: state.phoneNumber
+
     OverlayCard {
         MatchPassBadge()
         Spacer(Modifier.height(16.dp))
@@ -70,11 +73,11 @@ internal fun ConfirmPanel(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
-                text = "Paying as ${state.phoneNumber}",
+                text = "M-Pesa prompt → $stkPhone",
                 color = SdkColors.textSecondary,
                 fontSize = 11.sp,
             )
-            TextButton(onClick = onChangePhone) {
+            TextButton(onClick = onChangePaymentPhone) {
                 Text("Change", color = SdkColors.blue, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
             }
         }

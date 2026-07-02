@@ -26,6 +26,7 @@ import africa.matchpass.sdk.MatchPassGrant
 import africa.matchpass.sdk.MatchPassSDK
 import africa.matchpass.sdk.internal.MatchPassClient
 import africa.matchpass.sdk.internal.ui.panels.AccessGrantedPanel
+import africa.matchpass.sdk.internal.ui.panels.ChangePaymentPhonePanel
 import africa.matchpass.sdk.internal.ui.panels.ConfirmPanel
 import africa.matchpass.sdk.internal.ui.panels.IssuingPanel
 import africa.matchpass.sdk.internal.ui.panels.OtpPanel
@@ -98,8 +99,14 @@ internal fun PaywallScreen(
                     content = content,
                     state = state,
                     onConfirm = vm::confirmAndPay,
-                    onChangePhone = vm::changePhone,
+                    onChangePaymentPhone = vm::changePaymentPhone,
                     onDismiss = onDismiss,
+                )
+                PaywallStep.ChangingPaymentPhone -> ChangePaymentPhonePanel(
+                    state = state,
+                    onPhoneChange = vm::setEditingPaymentPhone,
+                    onConfirm = vm::confirmPaymentPhone,
+                    onCancel = vm::cancelPaymentPhoneChange,
                 )
                 PaywallStep.AwaitingOtp       -> OtpPanel(
                     state = state,

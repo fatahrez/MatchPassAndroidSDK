@@ -7,6 +7,7 @@ internal enum class PaywallStep {
     EnteringPhone,
     AwaitingOtp,
     Confirming,
+    ChangingPaymentPhone,   // user wants to pay with a different number — no OTP needed
     ProcessingPayment,
     Issuing,
     Polling,
@@ -15,7 +16,9 @@ internal enum class PaywallStep {
 
 internal data class PaywallState(
     val step: PaywallStep = PaywallStep.EnteringPhone,
-    val phoneNumber: String = "",
+    val phoneNumber: String = "",       // login identity (OTP-verified)
+    val paymentPhone: String? = null,   // M-Pesa target; null → falls back to phoneNumber
+    val editingPaymentPhone: String = "", // transient while in ChangingPaymentPhone step
     val otpCode: String = "",
     val demoOtp: String? = null,
     val error: String? = null,

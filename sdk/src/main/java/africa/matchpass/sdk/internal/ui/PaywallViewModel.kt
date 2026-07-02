@@ -41,7 +41,27 @@ internal class PaywallViewModel(
 
     fun setPhone(value: String) = _state.update { it.copy(phoneNumber = value, error = null) }
     fun setOtp(value: String) = _state.update { it.copy(otpCode = value, error = null) }
-    fun changePhone() = _state.update { it.copy(step = PaywallStep.EnteringPhone, error = null) }
+
+    // ── Payment phone (no OTP — just changes the M-Pesa target) ─────────────
+    fun changePaymentPhone() = _state.update {
+        it.copy(
+            step = PaywallStep.ChangingPaymentPhone,
+            editingPaymentPhone = it.paymentPhone ?: it.phoneNumber,
+            error = null,
+        )
+    }
+    fun setEditingPaymentPhone(value: String) =
+        _state.update { it.copy(editingPaymentPhone = value, error = null) }
+    fun confirmPaymentPhone() = _state.update {
+        it.copy(
+            step = PaywallStep.Confirming,
+            paymentPhone = it.editingPaymentPhone.trim().ifBlank { null },
+            error = null,
+        )
+    }
+    fun cancelPaymentPhoneChange() = _state.update {
+        it.copy(step = PaywallStep.Confirming, error = null)
+    }
 
     /**
      * Called when the paywall opens. Four outcomes:
@@ -159,19 +179,21 @@ internal class PaywallViewModel(
     // ── Purchase (M-Pesa STK Push) ────────────────────────────────────────────
 
     fun confirmAndPay() {
-        val phone = normalizePhone(_state.value.phoneNumber.trim())
+        val s = _state.value
+        // Use the overridden payment phone if set, otherwise fall back to login phone
+        val stkPhone = normalizePhone((s.paymentPhone ?: s.phoneNumber).trim())
         viewModelScope.launch {
-            // Step 1 — send STK Push to user's phone
+            // Step 1 — send STK Push
             _state.update { it.copy(step = PaywallStep.ProcessingPayment, error = null) }
             val initDto = runCatching {
                 client.service.initiatePayment(
                     auth = "ApiKey ${config.apiKey}",
                     body = InitiatePaymentDto(
-                        phone        = phone,
+                        phone        = stkPhone,
                         contentId    = content.id,
                         contentTitle = content.title,
                         contentType  = if (content.contentType == ContentType.SEASON) "series_season" else content.contentType.name.lowercase(),
-                        userRef      = _state.value.phoneNumber.trim(),
+                        userRef      = s.phoneNumber.trim(), // identity always uses login phone
                         amount       = content.price,
                         currency     = content.currency,
                     ),
