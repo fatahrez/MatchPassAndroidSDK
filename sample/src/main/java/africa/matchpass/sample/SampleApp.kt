@@ -15,5 +15,9 @@ class SampleApp : Application() {
                 debug = true,
             ),
         )
+//        MatchPassSDK.Builder(this)
+//            .apiKey("6bb774af7ab3181a7cc7f00e2e020d112934ae3de787beb64355ac1dc4740c83")   // from dashboard.matchpass.africa
+//            .debug(true)
+//            .initialize()
     }
 }
