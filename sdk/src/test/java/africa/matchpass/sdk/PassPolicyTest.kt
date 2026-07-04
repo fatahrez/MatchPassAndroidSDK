@@ -29,6 +29,11 @@ class PassPolicyTest {
     }
 
     @Test
+    fun `forType EVENT returns EVENT preset`() {
+        assertSame(PassPolicy.EVENT, PassPolicy.forType(ContentType.EVENT))
+    }
+
+    @Test
     fun `cache TTLs are ordered correctly — live content is validated more often than owned`() {
         assertTrue("CHANNEL < MATCH", PassPolicy.CHANNEL.cacheTtlSeconds < PassPolicy.MATCH.cacheTtlSeconds)
         assertTrue("MATCH < SEASON", PassPolicy.MATCH.cacheTtlSeconds < PassPolicy.SEASON.cacheTtlSeconds)
@@ -36,9 +41,10 @@ class PassPolicyTest {
     }
 
     @Test
-    fun `MATCH and CHANNEL do not allow rewatch`() {
+    fun `MATCH, CHANNEL and EVENT do not allow rewatch`() {
         assertFalse(PassPolicy.MATCH.allowRewatch)
         assertFalse(PassPolicy.CHANNEL.allowRewatch)
+        assertFalse(PassPolicy.EVENT.allowRewatch)
     }
 
     @Test
@@ -48,9 +54,10 @@ class PassPolicyTest {
     }
 
     @Test
-    fun `MATCH and CHANNEL show countdown`() {
+    fun `MATCH, CHANNEL and EVENT show countdown`() {
         assertTrue(PassPolicy.MATCH.showCountdown)
         assertTrue(PassPolicy.CHANNEL.showCountdown)
+        assertTrue(PassPolicy.EVENT.showCountdown)
     }
 
     @Test

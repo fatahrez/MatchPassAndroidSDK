@@ -30,4 +30,10 @@ enum class ContentType {
      * Validation is cached for 30 days — effectively permanent once purchased.
      */
     MOVIE,
+
+    /**
+     * A ticketed special event — comedy night, concert, graduation, etc.
+     * Treated like a MATCH for validation purposes (live window, frequent checks).
+     */
+    EVENT,
 }

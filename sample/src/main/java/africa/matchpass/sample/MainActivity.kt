@@ -247,6 +247,23 @@ private fun HomeContent(
                     )
                 }
             }
+            Spacer(Modifier.height(24.dp))
+        }
+        item {
+            SectionHeader("Live Events")
+            Column(
+                modifier = Modifier.padding(horizontal = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                EVENTS.forEach { item ->
+                    WideCard(
+                        content = item,
+                        hasAccess = accessState[item.passContent.id] == true,
+                        onClick = onContentClick,
+                    )
+                }
+            }
+            Spacer(Modifier.height(24.dp))
         }
     }
 

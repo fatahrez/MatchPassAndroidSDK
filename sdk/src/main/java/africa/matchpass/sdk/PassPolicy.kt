@@ -62,6 +62,15 @@ data class PassPolicy(
             passLabel = "Own it",
         )
 
+        /** Special event (comedy night, concert, graduation) — same as MATCH: live window, frequent checks. */
+        @JvmField
+        val EVENT = PassPolicy(
+            cacheTtlSeconds = 5 * 60L,
+            allowRewatch = false,
+            showCountdown = true,
+            passLabel = "Event Pass",
+        )
+
         /** Returns the canonical [PassPolicy] for a given [ContentType]. */
         @JvmStatic
         fun forType(type: ContentType): PassPolicy = when (type) {
@@ -69,6 +78,7 @@ data class PassPolicy(
             ContentType.CHANNEL -> CHANNEL
             ContentType.SEASON  -> SEASON
             ContentType.MOVIE   -> MOVIE
+            ContentType.EVENT   -> EVENT
         }
     }
 }

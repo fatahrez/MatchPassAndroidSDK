@@ -1,5 +1,6 @@
 package africa.matchpass.sample
 
+import africa.matchpass.sdk.ContentCategory
 import africa.matchpass.sdk.ContentType
 import africa.matchpass.sdk.MatchPassContent
 import androidx.compose.ui.graphics.Color
@@ -25,7 +26,7 @@ fun matchId(home: String, away: String, day: Int, mon: String, yr: String): Stri
     return "$h$a$d${mon.lowercase()}$yr"
 }
 
-// ── Channels ────────────────────────────────────────────────────────────────────
+// ── Channels (Broadcasting — open pricing) ────────────────────────────────────
 // Channels repeat daily — no date stamp needed, just a stable channel ID.
 
 val CHANNELS = listOf(
@@ -37,6 +38,7 @@ val CHANNELS = listOf(
             currency = "KSh",
             durationHours = 24,
             contentType = ContentType.CHANNEL,
+            category = ContentCategory.BROADCASTING,
         ),
         subtitle = "Live Sport",
         isLive = true,
@@ -54,6 +56,7 @@ val CHANNELS = listOf(
             currency = "KSh",
             durationHours = 24,
             contentType = ContentType.CHANNEL,
+            category = ContentCategory.BROADCASTING,
         ),
         subtitle = "Football",
         isLive = true,
@@ -71,6 +74,7 @@ val CHANNELS = listOf(
             currency = "KSh",
             durationHours = 24,
             contentType = ContentType.CHANNEL,
+            category = ContentCategory.ENTERTAINMENT,
         ),
         subtitle = "Entertainment",
         isLive = true,
@@ -88,6 +92,7 @@ val CHANNELS = listOf(
             currency = "KSh",
             durationHours = 24,
             contentType = ContentType.CHANNEL,
+            category = ContentCategory.ENTERTAINMENT,
         ),
         subtitle = "Music",
         isLive = true,
@@ -105,6 +110,7 @@ val CHANNELS = listOf(
             currency = "KSh",
             durationHours = 24,
             contentType = ContentType.CHANNEL,
+            category = ContentCategory.BROADCASTING,
         ),
         subtitle = "News",
         isLive = true,
@@ -116,19 +122,20 @@ val CHANNELS = listOf(
     ),
 )
 
-// ── Live Sport ──────────────────────────────────────────────────────────────────
-// IDs encode the fixture + date so a 2027 replay of the same fixture
-// is a distinct content item with a fresh pass.
+// ── Live Sport (Sports — fixed KES 50) ───────────────────────────────────────
+// Platform policy: all sports content is fixed at KES 50 to maximise viewership.
+// IDs encode the fixture + date so a 2027 replay is a distinct content item.
 
 val LIVE_SPORT = listOf(
     SampleContent(
         passContent = MatchPassContent(
-            id = matchId("arsenal", "mancity", 1, "jul", "26"),  // arsenalmancity01jul26
+            id = matchId("arsenal", "mancity", 1, "jul", "26"),
             title = "Arsenal vs Manchester City",
-            price = "299",
+            price = "50",
             currency = "KSh",
             durationHours = 4,
             contentType = ContentType.MATCH,
+            category = ContentCategory.SPORTS,
         ),
         subtitle = "English Premier League",
         isLive = true,
@@ -139,12 +146,13 @@ val LIVE_SPORT = listOf(
     ),
     SampleContent(
         passContent = MatchPassContent(
-            id = matchId("realmadrid", "bayernmunich", 2, "jul", "26"),  // realmadridbayernmunich02jul26
+            id = matchId("realmadrid", "bayernmunich", 2, "jul", "26"),
             title = "Real Madrid vs Bayern Munich",
-            price = "349",
+            price = "50",
             currency = "KSh",
             durationHours = 4,
             contentType = ContentType.MATCH,
+            category = ContentCategory.SPORTS,
         ),
         subtitle = "UEFA Champions League",
         isLive = false,
@@ -155,12 +163,13 @@ val LIVE_SPORT = listOf(
     ),
     SampleContent(
         passContent = MatchPassContent(
-            id = matchId("chiefs", "pirates", 3, "jul", "26"),  // chiefspirates03jul26
+            id = matchId("chiefs", "pirates", 3, "jul", "26"),
             title = "Kaizer Chiefs vs Orlando Pirates",
-            price = "249",
+            price = "50",
             currency = "KSh",
             durationHours = 3,
             contentType = ContentType.MATCH,
+            category = ContentCategory.SPORTS,
         ),
         subtitle = "PSL · Soweto Derby",
         isLive = false,
@@ -171,12 +180,13 @@ val LIVE_SPORT = listOf(
     ),
     SampleContent(
         passContent = MatchPassContent(
-            id = matchId("southafrica", "nigeria", 4, "jul", "26"),  // southafricanigeria04jul26
+            id = matchId("southafrica", "nigeria", 4, "jul", "26"),
             title = "South Africa vs Nigeria",
-            price = "229",
+            price = "50",
             currency = "KSh",
             durationHours = 3,
             contentType = ContentType.MATCH,
+            category = ContentCategory.SPORTS,
         ),
         subtitle = "AFCON Qualifier",
         isLive = false,
@@ -187,12 +197,13 @@ val LIVE_SPORT = listOf(
     ),
     SampleContent(
         passContent = MatchPassContent(
-            id = matchId("boxing", "riyadhseason", 5, "jul", "26"),  // boxingriyadhseason05jul26
+            id = matchId("boxing", "riyadhseason", 5, "jul", "26"),
             title = "Riyadh Season Boxing",
-            price = "499",
+            price = "50",
             currency = "KSh",
             durationHours = 6,
             contentType = ContentType.MATCH,
+            category = ContentCategory.SPORTS,
         ),
         subtitle = "Main Event · PPV",
         isLive = false,
@@ -203,17 +214,18 @@ val LIVE_SPORT = listOf(
     ),
 )
 
-// ── Movies ──────────────────────────────────────────────────────────────────────
+// ── Movies (Entertainment — KES 200–300) ─────────────────────────────────────
 
 val MOVIES = listOf(
     SampleContent(
         passContent = MatchPassContent(
             id = "movie-the-woman-king",
             title = "The Woman King",
-            price = "349",
+            price = "250",
             currency = "KSh",
             durationHours = 72,
             contentType = ContentType.MOVIE,
+            category = ContentCategory.ENTERTAINMENT,
         ),
         subtitle = "2022 · Action / History · 2h 15m",
         isLive = false,
@@ -225,10 +237,11 @@ val MOVIES = listOf(
         passContent = MatchPassContent(
             id = "movie-black-panther",
             title = "Black Panther: Wakanda Forever",
-            price = "399",
+            price = "299",
             currency = "KSh",
             durationHours = 72,
             contentType = ContentType.MOVIE,
+            category = ContentCategory.ENTERTAINMENT,
         ),
         subtitle = "2022 · Action / Adventure · 2h 41m",
         isLive = false,
@@ -238,17 +251,18 @@ val MOVIES = listOf(
     ),
 )
 
-// ── Series ──────────────────────────────────────────────────────────────────────
+// ── Series (Entertainment — KES 200–300 per season) ──────────────────────────
 
 val SERIES = listOf(
     SampleContent(
         passContent = MatchPassContent(
             id = "series-shaka-ilembe-s1",
             title = "Shaka Ilembe",
-            price = "599",
+            price = "250",
             currency = "KSh",
             durationHours = 720,
             contentType = ContentType.SEASON,
+            category = ContentCategory.ENTERTAINMENT,
         ),
         subtitle = "Season 1 · 10 Episodes · Historical Drama",
         isLive = false,
@@ -260,10 +274,11 @@ val SERIES = listOf(
         passContent = MatchPassContent(
             id = "series-those-who-remain-s1",
             title = "Those Who Remain",
-            price = "499",
+            price = "200",
             currency = "KSh",
             durationHours = 720,
             contentType = ContentType.SEASON,
+            category = ContentCategory.ENTERTAINMENT,
         ),
         subtitle = "Season 1 · 8 Episodes · Crime Thriller",
         isLive = false,
@@ -273,4 +288,44 @@ val SERIES = listOf(
     ),
 )
 
-val ALL_CONTENT = CHANNELS + LIVE_SPORT + MOVIES + SERIES
+// ── Special Events (Entertainment — KES 200–300) ──────────────────────────────
+// Comedy nights, concerts, live shows — use ContentType.EVENT
+
+val EVENTS = listOf(
+    SampleContent(
+        passContent = MatchPassContent(
+            id = "event-eric-omondi-live-jul26",
+            title = "Eric Omondi: Live & Unfiltered",
+            price = "200",
+            currency = "KSh",
+            durationHours = 4,
+            contentType = ContentType.EVENT,
+            category = ContentCategory.ENTERTAINMENT,
+        ),
+        subtitle = "Live Comedy · Nairobi",
+        isLive = false,
+        bgStart = Color(0xFF1A0A2E),
+        bgEnd = Color(0xFF3D1A6E),
+        emoji = "😂",
+        kickoffLabel = "Sat 5 Jul · 20:00",
+    ),
+    SampleContent(
+        passContent = MatchPassContent(
+            id = "event-churchill-show-jul26",
+            title = "Churchill Show Live",
+            price = "250",
+            currency = "KSh",
+            durationHours = 5,
+            contentType = ContentType.EVENT,
+            category = ContentCategory.ENTERTAINMENT,
+        ),
+        subtitle = "Live Comedy · KICC Nairobi",
+        isLive = false,
+        bgStart = Color(0xFF0A1A2E),
+        bgEnd = Color(0xFF1A3D6E),
+        emoji = "🎤",
+        kickoffLabel = "Fri 10 Jul · 19:30",
+    ),
+)
+
+val ALL_CONTENT = CHANNELS + LIVE_SPORT + MOVIES + SERIES + EVENTS
