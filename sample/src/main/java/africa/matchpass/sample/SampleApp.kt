@@ -11,7 +11,7 @@ class SampleApp : Application() {
             context = this,
             config = MatchPassConfig(
                 apiKey = "6bb774af7ab3181a7cc7f00e2e020d112934ae3de787beb64355ac1dc4740c83",
-                baseUrl = "https://staging.api.matchpass.africa/api/v1/",
+                baseUrl = "https://staging.api.b2b.matchpass.africa/api/v1/",
                 debug = true,
             ),
         )
