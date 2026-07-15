@@ -22,7 +22,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import africa.matchpass.sdk.MatchPassContent
 import africa.matchpass.sdk.internal.ui.PaywallState
-import africa.matchpass.sdk.internal.ui.SdkColors
+import africa.matchpass.sdk.internal.ui.LocalMatchPassColors
 
 private val MpesaGreen = Color(0xFF4CAF50)
 
@@ -30,6 +30,7 @@ private val MpesaGreen = Color(0xFF4CAF50)
 internal fun PaymentPanel(content: MatchPassContent, state: PaywallState) {
     // Show whichever phone will actually get the STK push
     val stkPhone = state.paymentPhone ?: state.phoneNumber
+    val colors = LocalMatchPassColors.current
 
     OverlayCard(horizontalAlignment = Alignment.CenterHorizontally) {
         MatchPassBadge()
@@ -50,14 +51,14 @@ internal fun PaymentPanel(content: MatchPassContent, state: PaywallState) {
 
         Text(
             text = "Check your phone",
-            color = SdkColors.text,
+            color = colors.text,
             fontSize = 17.sp,
             fontWeight = FontWeight.Bold,
         )
         Spacer(Modifier.height(6.dp))
         Text(
             text = "Enter your M-Pesa PIN on\n$stkPhone to complete payment",
-            color = SdkColors.textSecondary,
+            color = colors.textSecondary,
             fontSize = 13.sp,
             textAlign = TextAlign.Center,
         )
@@ -67,12 +68,12 @@ internal fun PaymentPanel(content: MatchPassContent, state: PaywallState) {
             modifier = Modifier
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(6.dp))
-                .background(SdkColors.card)
+                .background(colors.card)
                 .padding(12.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text(text = content.title, color = SdkColors.textSecondary, fontSize = 12.sp, modifier = Modifier.weight(1f))
+            Text(text = content.title, color = colors.textSecondary, fontSize = 12.sp, modifier = Modifier.weight(1f))
             Text(text = content.priceLabel(), color = MpesaGreen, fontSize = 13.sp, fontWeight = FontWeight.Black)
         }
     }

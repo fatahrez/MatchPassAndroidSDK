@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
@@ -29,6 +30,7 @@ import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -44,6 +46,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import africa.matchpass.sdk.internal.MatchPassClient
+import africa.matchpass.sdk.resolveMatchPassColors
 
 @Composable
 internal fun LoginScreen(
@@ -56,27 +59,30 @@ internal fun LoginScreen(
         factory = LoginViewModel.Factory(client, context, onLoggedIn)
     )
     val state by vm.state.collectAsState()
+    val colors = resolveMatchPassColors()
 
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(
-                Brush.verticalGradient(listOf(Color(0xFF0D1B4B), SdkColors.background))
-            ),
-    ) {
-        when (state.step) {
-            LoginViewModel.Step.Phone -> PhoneLoginStep(
-                state = state,
-                onPhoneChange = vm::setPhone,
-                onRequestOtp = vm::requestOtp,
-                onSkip = onSkip,
-            )
-            LoginViewModel.Step.Otp -> OtpLoginStep(
-                state = state,
-                onOtpChange = vm::setOtp,
-                onVerify = vm::verifyOtp,
-                onBack = vm::goBack,
-            )
+    CompositionLocalProvider(LocalMatchPassColors provides colors) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(
+                    Brush.verticalGradient(listOf(Color(0xFF0D1B4B), colors.background))
+                ),
+        ) {
+            when (state.step) {
+                LoginViewModel.Step.Phone -> PhoneLoginStep(
+                    state = state,
+                    onPhoneChange = vm::setPhone,
+                    onRequestOtp = vm::requestOtp,
+                    onSkip = onSkip,
+                )
+                LoginViewModel.Step.Otp -> OtpLoginStep(
+                    state = state,
+                    onOtpChange = vm::setOtp,
+                    onVerify = vm::verifyOtp,
+                    onBack = vm::goBack,
+                )
+            }
         }
     }
 }
@@ -90,26 +96,35 @@ private fun PhoneLoginStep(
     onRequestOtp: () -> Unit,
     onSkip: () -> Unit,
 ) {
-    Column(
-        modifier = Modifier
+    val colors = LocalMatchPassColors.current
+    // Capped and centered rather than a bare fillMaxSize() column: on a
+    // tablet the latter stretches text and inputs to the full device width
+    // instead of reading as a normal-width sign-in form.
+    Box(
+        Modifier
             .fillMaxSize()
             .statusBarsPadding()
-            .navigationBarsPadding()
+            .navigationBarsPadding(),
+        contentAlignment = Alignment.Center,
+    ) {
+    Column(
+        modifier = Modifier
+            .widthIn(max = 480.dp)
+            .fillMaxWidth()
             .padding(horizontal = 32.dp),
-        verticalArrangement = Arrangement.Center,
     ) {
         // Branding
         Row(verticalAlignment = Alignment.CenterVertically) {
             Icon(
                 Icons.Filled.Lock,
                 contentDescription = null,
-                tint = SdkColors.gold,
+                tint = colors.accent,
                 modifier = Modifier.size(20.dp),
             )
             Spacer(Modifier.width(8.dp))
             Text(
                 text = "MatchPass",
-                color = SdkColors.gold,
+                color = colors.accent,
                 fontSize = 14.sp,
                 fontWeight = FontWeight.Bold,
                 letterSpacing = 1.sp,
@@ -118,7 +133,7 @@ private fun PhoneLoginStep(
         Spacer(Modifier.height(24.dp))
         Text(
             text = "Watch what you want.\nPay only for what you watch.",
-            color = SdkColors.text,
+            color = colors.text,
             fontSize = 26.sp,
             fontWeight = FontWeight.Black,
             lineHeight = 32.sp,
@@ -126,7 +141,7 @@ private fun PhoneLoginStep(
         Spacer(Modifier.height(8.dp))
         Text(
             text = "Sign in once with your mobile number. No subscription, no account — just instant access.",
-            color = SdkColors.textSecondary,
+            color = colors.textSecondary,
             fontSize = 14.sp,
             lineHeight = 20.sp,
         )
@@ -134,29 +149,20 @@ private fun PhoneLoginStep(
 
         Text(
             text = "Mobile number",
-            color = SdkColors.textSecondary,
+            color = colors.textSecondary,
             fontSize = 12.sp,
             fontWeight = FontWeight.SemiBold,
         )
         Spacer(Modifier.height(8.dp))
-        OutlinedTextField(
-            value = state.phone,
-            onValueChange = onPhoneChange,
-            placeholder = { Text("+27 82 123 4567", color = SdkColors.textSecondary) },
-            singleLine = true,
+        PhoneNumberField(
+            phone = state.phone,
+            onPhoneChange = onPhoneChange,
+            colors = colors,
             modifier = Modifier.fillMaxWidth(),
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
-            colors = OutlinedTextFieldDefaults.colors(
-                focusedBorderColor = SdkColors.blue,
-                unfocusedBorderColor = SdkColors.card,
-                focusedTextColor = SdkColors.text,
-                unfocusedTextColor = SdkColors.text,
-                cursorColor = SdkColors.blue,
-            ),
         )
         state.error?.let {
             Spacer(Modifier.height(6.dp))
-            Text(it, color = SdkColors.error, fontSize = 12.sp)
+            Text(it, color = colors.error, fontSize = 12.sp)
         }
         Spacer(Modifier.height(16.dp))
         Button(
@@ -164,7 +170,7 @@ private fun PhoneLoginStep(
             enabled = state.phone.isNotBlank() && !state.isLoading,
             modifier = Modifier.fillMaxWidth().height(52.dp),
             shape = RoundedCornerShape(10.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = SdkColors.blue),
+            colors = ButtonDefaults.buttonColors(containerColor = colors.primary),
         ) {
             if (state.isLoading) {
                 CircularProgressIndicator(color = Color.White, strokeWidth = 2.dp, modifier = Modifier.size(20.dp))
@@ -176,11 +182,12 @@ private fun PhoneLoginStep(
         TextButton(onClick = onSkip, modifier = Modifier.fillMaxWidth()) {
             Text(
                 text = "Skip for now — browse without signing in",
-                color = SdkColors.textSecondary,
+                color = colors.textSecondary,
                 fontSize = 13.sp,
                 textAlign = TextAlign.Center,
             )
         }
+    }
     }
 }
 
@@ -193,6 +200,7 @@ private fun OtpLoginStep(
     onVerify: () -> Unit,
     onBack: () -> Unit,
 ) {
+    val colors = LocalMatchPassColors.current
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -200,19 +208,20 @@ private fun OtpLoginStep(
             .navigationBarsPadding(),
     ) {
         IconButton(onClick = onBack, modifier = Modifier.padding(8.dp)) {
-            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = SdkColors.text)
+            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = colors.text)
         }
+        Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
         Column(
             modifier = Modifier
-                .weight(1f)
+                .widthIn(max = 480.dp)
+                .fillMaxWidth()
                 .padding(horizontal = 32.dp),
-            verticalArrangement = Arrangement.Center,
         ) {
-            Text("Verify your number", color = SdkColors.text, fontSize = 26.sp, fontWeight = FontWeight.Black)
+            Text("Verify your number", color = colors.text, fontSize = 26.sp, fontWeight = FontWeight.Black)
             Spacer(Modifier.height(8.dp))
             Text(
                 text = "We sent a 6-digit code to ${state.phone}",
-                color = SdkColors.textSecondary,
+                color = colors.textSecondary,
                 fontSize = 14.sp,
             )
 
@@ -228,8 +237,8 @@ private fun OtpLoginStep(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Text("Demo code", color = SdkColors.gold, fontSize = 12.sp)
-                    Text(otp, color = SdkColors.gold, fontSize = 22.sp, fontWeight = FontWeight.Black)
+                    Text("Demo code", color = colors.accent, fontSize = 12.sp)
+                    Text(otp, color = colors.accent, fontSize = 22.sp, fontWeight = FontWeight.Black)
                 }
             }
 
@@ -237,21 +246,21 @@ private fun OtpLoginStep(
             OutlinedTextField(
                 value = state.otp,
                 onValueChange = { if (it.length <= 6) onOtpChange(it) },
-                placeholder = { Text("6-digit code", color = SdkColors.textSecondary) },
+                placeholder = { Text("6-digit code", color = colors.textSecondary) },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = SdkColors.blue,
-                    unfocusedBorderColor = SdkColors.card,
-                    focusedTextColor = SdkColors.text,
-                    unfocusedTextColor = SdkColors.text,
-                    cursorColor = SdkColors.blue,
+                    focusedBorderColor = colors.primary,
+                    unfocusedBorderColor = colors.card,
+                    focusedTextColor = colors.text,
+                    unfocusedTextColor = colors.text,
+                    cursorColor = colors.primary,
                 ),
             )
             state.error?.let {
                 Spacer(Modifier.height(6.dp))
-                Text(it, color = SdkColors.error, fontSize = 12.sp)
+                Text(it, color = colors.error, fontSize = 12.sp)
             }
             Spacer(Modifier.height(16.dp))
             Button(
@@ -259,7 +268,7 @@ private fun OtpLoginStep(
                 enabled = state.otp.length == 6 && !state.isLoading,
                 modifier = Modifier.fillMaxWidth().height(52.dp),
                 shape = RoundedCornerShape(10.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = SdkColors.blue),
+                colors = ButtonDefaults.buttonColors(containerColor = colors.primary),
             ) {
                 if (state.isLoading) {
                     CircularProgressIndicator(color = Color.White, strokeWidth = 2.dp, modifier = Modifier.size(20.dp))
@@ -269,8 +278,9 @@ private fun OtpLoginStep(
             }
             Spacer(Modifier.height(12.dp))
             TextButton(onClick = onBack, modifier = Modifier.fillMaxWidth()) {
-                Text("Use a different number", color = SdkColors.textSecondary, fontSize = 13.sp)
+                Text("Use a different number", color = colors.textSecondary, fontSize = 13.sp)
             }
+        }
         }
     }
 }

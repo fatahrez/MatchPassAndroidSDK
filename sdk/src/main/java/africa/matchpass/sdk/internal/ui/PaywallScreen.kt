@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.collectAsState
@@ -32,6 +33,7 @@ import africa.matchpass.sdk.internal.ui.panels.IssuingPanel
 import africa.matchpass.sdk.internal.ui.panels.OtpPanel
 import africa.matchpass.sdk.internal.ui.panels.PaymentPanel
 import africa.matchpass.sdk.internal.ui.panels.PhonePanel
+import africa.matchpass.sdk.resolveMatchPassColors
 
 @Composable
 internal fun PaywallScreen(
@@ -52,11 +54,13 @@ internal fun PaywallScreen(
         factory = PaywallViewModel.Factory(config, content, client, context, onAccessGranted, userPhone),
     )
     val state by vm.state.collectAsState()
+    val colors = resolveMatchPassColors()
 
     LaunchedEffect(content.id) {
         vm.onStart()
     }
 
+    CompositionLocalProvider(LocalMatchPassColors provides colors) {
     Box(modifier = Modifier.fillMaxSize()) {
         content.thumbnailUrl?.let { url ->
             AsyncImage(
@@ -70,7 +74,7 @@ internal fun PaywallScreen(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(SdkColors.overlay)
+                .background(colors.overlay)
                 .clickable(
                     interactionSource = remember { MutableInteractionSource() },
                     indication = null,
@@ -123,5 +127,6 @@ internal fun PaywallScreen(
                 )
             }
         }
+    }
     }
 }

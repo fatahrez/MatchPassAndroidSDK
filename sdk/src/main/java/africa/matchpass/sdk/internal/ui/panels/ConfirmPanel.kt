@@ -23,7 +23,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import africa.matchpass.sdk.MatchPassContent
 import africa.matchpass.sdk.internal.ui.PaywallState
-import africa.matchpass.sdk.internal.ui.SdkColors
+import africa.matchpass.sdk.internal.ui.LocalMatchPassColors
 
 @Composable
 internal fun ConfirmPanel(
@@ -35,13 +35,14 @@ internal fun ConfirmPanel(
 ) {
     // The number that will actually receive the M-Pesa prompt
     val stkPhone = state.paymentPhone ?: state.phoneNumber
+    val colors = LocalMatchPassColors.current
 
     OverlayCard {
         MatchPassBadge()
         Spacer(Modifier.height(16.dp))
         Text(
             text = "Confirm your ${content.policy.passLabel}",
-            color = SdkColors.text,
+            color = colors.text,
             fontSize = 18.sp,
             fontWeight = FontWeight.Bold,
         )
@@ -50,21 +51,21 @@ internal fun ConfirmPanel(
             modifier = Modifier
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(8.dp))
-                .background(SdkColors.card)
+                .background(colors.card)
                 .padding(14.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Column(modifier = Modifier.weight(1f)) {
-                Text(text = content.title, color = SdkColors.text, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+                Text(text = content.title, color = colors.text, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
                 Text(
                     text = "${content.durationHours}h access · ${content.policy.passLabel}",
-                    color = SdkColors.textSecondary,
+                    color = colors.textSecondary,
                     fontSize = 12.sp,
                 )
             }
             Spacer(Modifier.width(12.dp))
-            Text(text = content.priceLabel(), color = SdkColors.gold, fontSize = 18.sp, fontWeight = FontWeight.Black)
+            Text(text = content.priceLabel(), color = colors.accent, fontSize = 18.sp, fontWeight = FontWeight.Black)
         }
         Spacer(Modifier.height(10.dp))
         Row(
@@ -74,28 +75,28 @@ internal fun ConfirmPanel(
         ) {
             Text(
                 text = "M-Pesa prompt → $stkPhone",
-                color = SdkColors.textSecondary,
+                color = colors.textSecondary,
                 fontSize = 11.sp,
             )
             TextButton(onClick = onChangePaymentPhone) {
-                Text("Change", color = SdkColors.blue, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+                Text("Change", color = colors.primary, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
             }
         }
         state.error?.let {
-            Text(text = it, color = SdkColors.error, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp))
+            Text(text = it, color = colors.error, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp))
         }
         Spacer(Modifier.height(14.dp))
         Button(
             onClick = onConfirm,
             modifier = Modifier.fillMaxWidth().height(52.dp),
             shape = RoundedCornerShape(8.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = SdkColors.green),
+            colors = ButtonDefaults.buttonColors(containerColor = colors.success),
         ) {
             Text("Confirm & Watch — ${content.priceLabel()}", fontWeight = FontWeight.Black, fontSize = 14.sp)
         }
         Spacer(Modifier.height(8.dp))
         TextButton(onClick = onDismiss, modifier = Modifier.fillMaxWidth()) {
-            Text("Cancel", color = SdkColors.textSecondary, fontSize = 13.sp)
+            Text("Cancel", color = colors.textSecondary, fontSize = 13.sp)
         }
     }
 }

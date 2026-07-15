@@ -21,7 +21,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import africa.matchpass.sdk.internal.ui.PaywallState
-import africa.matchpass.sdk.internal.ui.SdkColors
+import africa.matchpass.sdk.internal.ui.LocalMatchPassColors
 
 @Composable
 internal fun ChangePaymentPhonePanel(
@@ -30,19 +30,20 @@ internal fun ChangePaymentPhonePanel(
     onConfirm: () -> Unit,
     onCancel: () -> Unit,
 ) {
+    val colors = LocalMatchPassColors.current
     OverlayCard {
         MatchPassBadge()
         Spacer(Modifier.height(16.dp))
         Text(
             text = "Pay with a different number",
-            color = SdkColors.text,
+            color = colors.text,
             fontSize = 18.sp,
             fontWeight = FontWeight.Bold,
         )
         Spacer(Modifier.height(6.dp))
         Text(
             text = "Enter the M-Pesa number to receive the payment prompt. Your account stays linked to ${state.phoneNumber}.",
-            color = SdkColors.textSecondary,
+            color = colors.textSecondary,
             fontSize = 13.sp,
             lineHeight = 18.sp,
         )
@@ -51,7 +52,7 @@ internal fun ChangePaymentPhonePanel(
             value = state.editingPaymentPhone,
             onValueChange = onPhoneChange,
             modifier = Modifier.fillMaxWidth(),
-            placeholder = { Text("e.g. 0712 345 678", color = SdkColors.textSecondary) },
+            placeholder = { Text("e.g. 0712 345 678", color = colors.textSecondary) },
             singleLine = true,
             keyboardOptions = KeyboardOptions(
                 keyboardType = KeyboardType.Phone,
@@ -59,33 +60,33 @@ internal fun ChangePaymentPhonePanel(
             ),
             keyboardActions = KeyboardActions(onDone = { onConfirm() }),
             colors = TextFieldDefaults.colors(
-                focusedContainerColor = SdkColors.card,
-                unfocusedContainerColor = SdkColors.card,
-                focusedTextColor = SdkColors.text,
-                unfocusedTextColor = SdkColors.text,
-                focusedIndicatorColor = SdkColors.green,
+                focusedContainerColor = colors.card,
+                unfocusedContainerColor = colors.card,
+                focusedTextColor = colors.text,
+                unfocusedTextColor = colors.text,
+                focusedIndicatorColor = colors.success,
                 unfocusedIndicatorColor = Color.Transparent,
-                cursorColor = SdkColors.green,
+                cursorColor = colors.success,
             ),
             shape = RoundedCornerShape(8.dp),
         )
         state.error?.let {
             Spacer(Modifier.height(8.dp))
-            Text(text = it, color = SdkColors.error, fontSize = 12.sp)
+            Text(text = it, color = colors.error, fontSize = 12.sp)
         }
         Spacer(Modifier.height(16.dp))
         Button(
             onClick = onConfirm,
             modifier = Modifier.fillMaxWidth().height(52.dp),
             shape = RoundedCornerShape(8.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = SdkColors.green),
+            colors = ButtonDefaults.buttonColors(containerColor = colors.success),
             enabled = state.editingPaymentPhone.isNotBlank(),
         ) {
             Text("Use this number", fontWeight = FontWeight.Black, fontSize = 14.sp)
         }
         Spacer(Modifier.height(8.dp))
         TextButton(onClick = onCancel, modifier = Modifier.fillMaxWidth()) {
-            Text("Cancel", color = SdkColors.textSecondary, fontSize = 13.sp)
+            Text("Cancel", color = colors.textSecondary, fontSize = 13.sp)
         }
     }
 }

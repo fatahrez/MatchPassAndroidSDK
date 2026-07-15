@@ -18,25 +18,26 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import africa.matchpass.sdk.MatchPassContent
-import africa.matchpass.sdk.internal.ui.SdkColors
+import africa.matchpass.sdk.internal.ui.LocalMatchPassColors
 
 @Composable
 internal fun AccessGrantedPanel(content: MatchPassContent, onWatch: () -> Unit) {
+    val colors = LocalMatchPassColors.current
     OverlayCard(horizontalAlignment = Alignment.CenterHorizontally) {
         Icon(
             imageVector = Icons.Filled.CheckCircle,
             contentDescription = null,
-            tint = SdkColors.green,
+            tint = colors.success,
             modifier = Modifier.size(56.dp),
         )
         Spacer(Modifier.height(16.dp))
-        Text(text = "Access Granted!", color = SdkColors.text, fontSize = 22.sp, fontWeight = FontWeight.Black)
+        Text(text = "Access Granted!", color = colors.text, fontSize = 22.sp, fontWeight = FontWeight.Black)
         Spacer(Modifier.height(4.dp))
-        Text(text = content.title, color = SdkColors.textSecondary, fontSize = 14.sp)
+        Text(text = content.title, color = colors.textSecondary, fontSize = 14.sp)
         Spacer(Modifier.height(6.dp))
         Text(
             text = "Your MatchPass is active for ${content.durationHours}h",
-            color = SdkColors.gold,
+            color = colors.accent,
             fontSize = 11.sp,
             fontWeight = FontWeight.SemiBold,
         )
@@ -45,7 +46,7 @@ internal fun AccessGrantedPanel(content: MatchPassContent, onWatch: () -> Unit) 
             onClick = onWatch,
             modifier = Modifier.fillMaxWidth().height(52.dp),
             shape = RoundedCornerShape(8.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = SdkColors.blue),
+            colors = ButtonDefaults.buttonColors(containerColor = colors.primary),
         ) {
             Text("Watch Now", fontWeight = FontWeight.Black, fontSize = 15.sp)
         }

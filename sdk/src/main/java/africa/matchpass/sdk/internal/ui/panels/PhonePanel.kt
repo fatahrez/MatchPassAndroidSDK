@@ -24,7 +24,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import africa.matchpass.sdk.MatchPassContent
 import africa.matchpass.sdk.internal.ui.PaywallState
-import africa.matchpass.sdk.internal.ui.SdkColors
+import africa.matchpass.sdk.internal.ui.LocalMatchPassColors
+import africa.matchpass.sdk.internal.ui.PhoneNumberField
 
 @Composable
 internal fun PhonePanel(
@@ -34,47 +35,39 @@ internal fun PhonePanel(
     onRequestOtp: () -> Unit,
     onDismiss: () -> Unit,
 ) {
+    val colors = LocalMatchPassColors.current
     OverlayCard {
         MatchPassBadge()
         Spacer(Modifier.height(16.dp))
-        Text(text = content.title, color = SdkColors.text, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+        Text(text = content.title, color = colors.text, fontSize = 18.sp, fontWeight = FontWeight.Bold)
         Spacer(Modifier.height(4.dp))
         Text(
             text = "${content.priceLabel()} · ${content.durationHours}h access · No subscription needed",
-            color = SdkColors.textSecondary,
+            color = colors.textSecondary,
             fontSize = 12.sp,
         )
-        HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp), color = SdkColors.card)
-        Text(text = "Verify your number", color = SdkColors.text, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+        HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp), color = colors.card)
+        Text(text = "Verify your number", color = colors.text, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
         Spacer(Modifier.height(2.dp))
         Text(
             text = "One-time only — future purchases will be instant",
-            color = SdkColors.textSecondary,
+            color = colors.textSecondary,
             fontSize = 11.sp,
         )
         Spacer(Modifier.height(10.dp))
-        OutlinedTextField(
-            value = state.phoneNumber,
-            onValueChange = onPhoneChange,
-            placeholder = { Text("+27 82 123 4567", color = SdkColors.textSecondary) },
-            singleLine = true,
+        PhoneNumberField(
+            phone = state.phoneNumber,
+            onPhoneChange = onPhoneChange,
+            colors = colors,
             modifier = Modifier.fillMaxWidth(),
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
-            colors = OutlinedTextFieldDefaults.colors(
-                focusedBorderColor = SdkColors.blue,
-                unfocusedBorderColor = SdkColors.card,
-                focusedTextColor = SdkColors.text,
-                unfocusedTextColor = SdkColors.text,
-                cursorColor = SdkColors.blue,
-            ),
         )
-        state.error?.let { Text(text = it, color = SdkColors.error, fontSize = 12.sp, modifier = Modifier.padding(top = 6.dp)) }
+        state.error?.let { Text(text = it, color = colors.error, fontSize = 12.sp, modifier = Modifier.padding(top = 6.dp)) }
         Spacer(Modifier.height(16.dp))
         Button(
             onClick = onRequestOtp,
             modifier = Modifier.fillMaxWidth().height(50.dp),
             shape = RoundedCornerShape(8.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = SdkColors.blue),
+            colors = ButtonDefaults.buttonColors(containerColor = colors.primary),
             enabled = state.phoneNumber.isNotBlank() && !state.isLoading,
         ) {
             if (state.isLoading) {
@@ -85,7 +78,7 @@ internal fun PhonePanel(
         }
         Spacer(Modifier.height(8.dp))
         TextButton(onClick = onDismiss, modifier = Modifier.fillMaxWidth()) {
-            Text("Maybe Later", color = SdkColors.textSecondary, fontSize = 13.sp)
+            Text("Maybe Later", color = colors.textSecondary, fontSize = 13.sp)
         }
     }
 }
