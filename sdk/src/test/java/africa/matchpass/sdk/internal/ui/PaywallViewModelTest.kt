@@ -6,15 +6,14 @@ import africa.matchpass.sdk.MatchPassContent
 import africa.matchpass.sdk.MatchPassGrant
 import africa.matchpass.sdk.internal.AccessChecker
 import africa.matchpass.sdk.internal.GuestSessionDto
-import africa.matchpass.sdk.internal.IssuePassDto
+import africa.matchpass.sdk.internal.InitiatePaymentResponseDto
 import africa.matchpass.sdk.internal.MatchPassClient
 import africa.matchpass.sdk.internal.MatchPassService
 import africa.matchpass.sdk.internal.MatchPassStore
 import africa.matchpass.sdk.internal.OtpRequestDto
 import africa.matchpass.sdk.internal.OtpResponseDto
 import africa.matchpass.sdk.internal.OtpVerifyDto
-import africa.matchpass.sdk.internal.PassDto
-import africa.matchpass.sdk.internal.ValidatePassDto
+import africa.matchpass.sdk.internal.PaymentStatusDto
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
@@ -257,15 +256,23 @@ class PaywallViewModelTest {
 
     // ── confirmAndPay ──────────────────────────────────────────────────────────
 
+    // confirmAndPay is an STK-push-then-poll flow: initiatePayment() kicks off the
+    // push and returns a checkout_request_id, then paymentStatus() is polled every
+    // 3s (repeat(30), so 90s max) until it reports completed/failed/cancelled/timed_out.
+    // These tests previously mocked service.issuePass()/validatePass() — an older,
+    // synchronous API this method doesn't call at all; the mocks were simply never
+    // hit, which is exactly why they'd only pass by accident (an unmocked strict-mock
+    // call throws, which happened to land in the same Confirming+error state one of
+    // these tests expected) or fail outright (the others expected a success path an
+    // unmocked call can never reach).
+
     @Test
     fun `confirmAndPay transitions through all steps then reaches AccessGranted`() = runTest {
         viewModel.setPhone("+27821234567")
-        val issuedPass = PassDto(token = "pass-tok", contentId = content.id, expiresAt = "2099-01-01T00:00:00Z")
-        coEvery {
-            service.issuePass("ApiKey test-key", IssuePassDto(content.id, "+27821234567", "29.00", "ZAR"))
-        } returns issuedPass
-        coEvery { service.validatePass("ApiKey test-key", "pass-tok") } returns
-            ValidatePassDto(isValid = true, status = "active", expiresAt = "2099-01-01T00:00:00Z")
+        coEvery { service.initiatePayment(any(), any()) } returns
+            InitiatePaymentResponseDto(checkoutRequestId = "chk-123")
+        coEvery { service.paymentStatus(any(), "chk-123") } returns
+            PaymentStatusDto(status = "completed", token = "pass-tok", expiresAt = "2099-01-01T00:00:00Z")
 
         viewModel.confirmAndPay()
         advanceTimeBy(3_000)
@@ -280,10 +287,10 @@ class PaywallViewModelTest {
     @Test
     fun `watchContent fires onAccessGranted after successful purchase`() = runTest {
         viewModel.setPhone("+27821234567")
-        val issuedPass = PassDto(token = "pass-tok", contentId = content.id, expiresAt = "2099-01-01T00:00:00Z")
-        coEvery { service.issuePass(any(), any()) } returns issuedPass
-        coEvery { service.validatePass(any(), any()) } returns
-            ValidatePassDto(isValid = true, status = "active", expiresAt = "2099-01-01T00:00:00Z")
+        coEvery { service.initiatePayment(any(), any()) } returns
+            InitiatePaymentResponseDto(checkoutRequestId = "chk-123")
+        coEvery { service.paymentStatus(any(), "chk-123") } returns
+            PaymentStatusDto(status = "completed", token = "pass-tok", expiresAt = "2099-01-01T00:00:00Z")
 
         viewModel.confirmAndPay()
         advanceTimeBy(3_000)
@@ -296,9 +303,9 @@ class PaywallViewModelTest {
     }
 
     @Test
-    fun `confirmAndPay returns to Confirming with error when issuePass fails`() = runTest {
+    fun `confirmAndPay returns to Confirming with error when initiatePayment fails`() = runTest {
         viewModel.setPhone("+27821234567")
-        coEvery { service.issuePass(any(), any()) } throws IOException("Server error")
+        coEvery { service.initiatePayment(any(), any()) } throws IOException("Server error")
 
         viewModel.confirmAndPay()
         advanceTimeBy(3_000)
@@ -310,12 +317,29 @@ class PaywallViewModelTest {
     }
 
     @Test
+    fun `confirmAndPay returns to Confirming with error when payment fails`() = runTest {
+        viewModel.setPhone("+27821234567")
+        coEvery { service.initiatePayment(any(), any()) } returns
+            InitiatePaymentResponseDto(checkoutRequestId = "chk-123")
+        coEvery { service.paymentStatus(any(), "chk-123") } returns
+            PaymentStatusDto(status = "failed", resultDesc = "Insufficient funds")
+
+        viewModel.confirmAndPay()
+        advanceTimeBy(3_000)
+        advanceUntilIdle()
+
+        assertEquals(PaywallStep.Confirming, viewModel.state.value.step)
+        assertEquals("Insufficient funds", viewModel.state.value.error)
+        assertTrue(capturedGrants.isEmpty())
+    }
+
+    @Test
     fun `confirmAndPay saves pass to store after successful issuance`() = runTest {
         viewModel.setPhone("+27821234567")
-        val issuedPass = PassDto(token = "pass-tok", contentId = content.id, expiresAt = "2099-01-01T00:00:00Z")
-        coEvery { service.issuePass(any(), any()) } returns issuedPass
-        coEvery { service.validatePass(any(), any()) } returns
-            ValidatePassDto(isValid = true, status = "active")
+        coEvery { service.initiatePayment(any(), any()) } returns
+            InitiatePaymentResponseDto(checkoutRequestId = "chk-123")
+        coEvery { service.paymentStatus(any(), "chk-123") } returns
+            PaymentStatusDto(status = "completed", token = "pass-tok", expiresAt = "2099-01-01T00:00:00Z")
 
         viewModel.confirmAndPay()
         advanceTimeBy(3_000)
