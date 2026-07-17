@@ -11,7 +11,7 @@ internal interface MatchPassService {
     @POST("guests/otp/request/")
     suspend fun requestOtp(
         @Header("Authorization") auth: String,
-        @Query("demo") demo: Boolean = true,
+        @Query("demo") demo: Boolean = false,
         @Body body: OtpRequestDto,
     ): OtpResponseDto
 
