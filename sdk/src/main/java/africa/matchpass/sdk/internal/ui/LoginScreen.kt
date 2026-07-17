@@ -38,6 +38,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -62,13 +63,17 @@ internal fun LoginScreen(
     )
     val state by vm.state.collectAsState()
     val colors = resolveMatchPassColors()
+    // A brand-tinted glow fading into the theme's own background, rather
+    // than a fixed navy that ignored whatever theme/accent the host app
+    // (or MatchPassSDK.Builder.colors) actually resolved to.
+    val gradientTop = lerp(colors.background, colors.primary, 0.22f)
 
     CompositionLocalProvider(LocalMatchPassColors provides colors) {
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .background(
-                    Brush.verticalGradient(listOf(Color(0xFF0D1B4B), colors.background))
+                    Brush.verticalGradient(listOf(gradientTop, colors.background))
                 ),
         ) {
             when (state.step) {
