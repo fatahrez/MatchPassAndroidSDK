@@ -188,13 +188,13 @@ class PaywallViewModelTest {
         viewModel.requestOtp()
         advanceUntilIdle()
         assertEquals(PaywallStep.EnteringPhone, viewModel.state.value.step)
-        coVerify(exactly = 0) { service.requestOtp(any(), any()) }
+        coVerify(exactly = 0) { service.requestOtp(any(), any(), any()) }
     }
 
     @Test
     fun `requestOtp transitions to AwaitingOtp on success`() = runTest {
         viewModel.setPhone("+27821234567")
-        coEvery { service.requestOtp(any(), OtpRequestDto("+27821234567")) } returns
+        coEvery { service.requestOtp(any(), any(), OtpRequestDto("+27821234567")) } returns
             OtpResponseDto(message = "OTP sent", otp = "")
 
         viewModel.requestOtp()
@@ -206,7 +206,7 @@ class PaywallViewModelTest {
     @Test
     fun `requestOtp sets demoOtp when server returns one`() = runTest {
         viewModel.setPhone("+27821234567")
-        coEvery { service.requestOtp(any(), any()) } returns OtpResponseDto(otp = "987654")
+        coEvery { service.requestOtp(any(), any(), any()) } returns OtpResponseDto(otp = "987654")
 
         viewModel.requestOtp()
         advanceUntilIdle()
@@ -217,7 +217,7 @@ class PaywallViewModelTest {
     @Test
     fun `requestOtp returns to EnteringPhone with error on failure`() = runTest {
         viewModel.setPhone("+27821234567")
-        coEvery { service.requestOtp(any(), any()) } throws IOException("Network unreachable")
+        coEvery { service.requestOtp(any(), any(), any()) } throws IOException("Network unreachable")
 
         viewModel.requestOtp()
         advanceUntilIdle()
@@ -232,7 +232,7 @@ class PaywallViewModelTest {
     fun `verifyOtp transitions to Confirming on success`() = runTest {
         viewModel.setPhone("+27821234567")
         viewModel.setOtp("123456")
-        coEvery { service.verifyOtp(OtpVerifyDto("+27821234567", "123456")) } returns
+        coEvery { service.verifyOtp(any(), OtpVerifyDto("+27821234567", "123456")) } returns
             GuestSessionDto(sessionToken = "sess-tok", userRef = "+27821234567")
 
         viewModel.verifyOtp()
@@ -246,7 +246,7 @@ class PaywallViewModelTest {
     fun `verifyOtp shows error when OTP is wrong`() = runTest {
         viewModel.setPhone("+27821234567")
         viewModel.setOtp("000000")
-        coEvery { service.verifyOtp(any()) } throws RuntimeException("Invalid OTP")
+        coEvery { service.verifyOtp(any(), any()) } throws RuntimeException("Invalid OTP")
 
         viewModel.verifyOtp()
         advanceUntilIdle()

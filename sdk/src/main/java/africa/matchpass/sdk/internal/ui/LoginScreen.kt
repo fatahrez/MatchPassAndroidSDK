@@ -45,18 +45,20 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import africa.matchpass.sdk.MatchPassConfig
 import africa.matchpass.sdk.internal.MatchPassClient
 import africa.matchpass.sdk.resolveMatchPassColors
 
 @Composable
 internal fun LoginScreen(
+    config: MatchPassConfig,
     client: MatchPassClient,
     onLoggedIn: (phone: String) -> Unit,
     onSkip: () -> Unit,
 ) {
     val context = LocalContext.current
     val vm: LoginViewModel = viewModel(
-        factory = LoginViewModel.Factory(client, context, onLoggedIn)
+        factory = LoginViewModel.Factory(config, client, context, onLoggedIn)
     )
     val state by vm.state.collectAsState()
     val colors = resolveMatchPassColors()

@@ -10,12 +10,16 @@ internal interface MatchPassService {
 
     @POST("guests/otp/request/")
     suspend fun requestOtp(
+        @Header("Authorization") auth: String,
         @Query("demo") demo: Boolean = true,
         @Body body: OtpRequestDto,
     ): OtpResponseDto
 
     @POST("guests/otp/verify/")
-    suspend fun verifyOtp(@Body body: OtpVerifyDto): GuestSessionDto
+    suspend fun verifyOtp(
+        @Header("Authorization") auth: String,
+        @Body body: OtpVerifyDto,
+    ): GuestSessionDto
 
     @POST("passes/issue/")
     suspend fun issuePass(

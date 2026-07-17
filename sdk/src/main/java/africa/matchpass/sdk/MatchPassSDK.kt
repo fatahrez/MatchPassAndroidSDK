@@ -65,10 +65,15 @@ object MatchPassSDK {
      */
     class Builder(private val context: Context) {
         private var apiKey: String? = null
+        private var environment: MatchPassEnvironment = MatchPassEnvironment.PRODUCTION
         private var debug: Boolean = false
         private var colors: MatchPassColors? = null
 
         fun apiKey(key: String) = apply { apiKey = key }
+
+        /** [MatchPassEnvironment.STAGING] while integrating, [MatchPassEnvironment.PRODUCTION] (the default) for release. */
+        fun environment(env: MatchPassEnvironment) = apply { environment = env }
+
         fun debug(enabled: Boolean) = apply { debug = enabled }
 
         /**
@@ -81,7 +86,7 @@ object MatchPassSDK {
             val key = checkNotNull(apiKey) {
                 "apiKey is required. Call Builder.apiKey(\"...\") before initialize()."
             }
-            init(context, MatchPassConfig(apiKey = key, debug = debug, colors = colors))
+            init(context, MatchPassConfig(apiKey = key, environment = environment, debug = debug, colors = colors))
         }
     }
 
@@ -155,6 +160,7 @@ object MatchPassSDK {
     ) {
         checkInitialised()
         LoginScreen(
+            config = config,
             client = client,
             onLoggedIn = onLoggedIn,
             onSkip = onSkip,

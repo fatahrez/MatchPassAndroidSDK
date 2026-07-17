@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import africa.matchpass.sdk.MatchPassConfig
 import africa.matchpass.sdk.internal.MatchPassClient
 import africa.matchpass.sdk.internal.MatchPassStore
 import africa.matchpass.sdk.internal.OtpRequestDto
@@ -15,6 +16,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 internal class LoginViewModel(
+    private val config: MatchPassConfig,
     private val client: MatchPassClient,
     private val store: MatchPassStore,
     private val onLoggedIn: (phone: String) -> Unit,
@@ -42,7 +44,7 @@ internal class LoginViewModel(
         val phone = _state.value.phone.trim().ifBlank { return }
         viewModelScope.launch {
             _state.update { it.copy(isLoading = true, error = null) }
-            runCatching { client.service.requestOtp(body = OtpRequestDto(phone)) }
+            runCatching { client.service.requestOtp(auth = "ApiKey ${config.apiKey}", body = OtpRequestDto(phone)) }
                 .onSuccess { res ->
                     _state.update {
                         it.copy(step = Step.Otp, isLoading = false, demoOtp = res.otp.ifBlank { null })
@@ -59,7 +61,10 @@ internal class LoginViewModel(
         viewModelScope.launch {
             _state.update { it.copy(isLoading = true, error = null) }
             runCatching {
-                client.service.verifyOtp(OtpVerifyDto(phoneNumber = s.phone.trim(), code = s.otp.trim()))
+                client.service.verifyOtp(
+                    auth = "ApiKey ${config.apiKey}",
+                    body = OtpVerifyDto(phoneNumber = s.phone.trim(), code = s.otp.trim()),
+                )
             }
                 .onSuccess {
                     store.savePhone(s.phone.trim())
@@ -72,12 +77,13 @@ internal class LoginViewModel(
     }
 
     class Factory(
+        private val config: MatchPassConfig,
         private val client: MatchPassClient,
         private val context: Context,
         private val onLoggedIn: (String) -> Unit,
     ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T =
-            LoginViewModel(client, MatchPassStore(context), onLoggedIn) as T
+            LoginViewModel(config, client, MatchPassStore(context), onLoggedIn) as T
     }
 }
