@@ -155,6 +155,7 @@ object MatchPassSDK {
     ) {
         checkInitialised()
         LoginScreen(
+            config = config,
             client = client,
             onLoggedIn = onLoggedIn,
             onSkip = onSkip,

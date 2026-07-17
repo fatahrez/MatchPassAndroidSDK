@@ -152,7 +152,7 @@ internal class PaywallViewModel(
         store.savePhone(phone)
         viewModelScope.launch {
             _state.update { it.copy(error = null, isLoading = true) }
-            runCatching { client.service.requestOtp(body = OtpRequestDto(phone)) }
+            runCatching { client.service.requestOtp(auth = "ApiKey ${config.apiKey}", body = OtpRequestDto(phone)) }
                 .onSuccess { res ->
                     _state.update {
                         it.copy(step = PaywallStep.AwaitingOtp, isLoading = false, demoOtp = res.otp.ifBlank { null })
@@ -169,7 +169,10 @@ internal class PaywallViewModel(
         viewModelScope.launch {
             _state.update { it.copy(error = null) }
             runCatching {
-                client.service.verifyOtp(OtpVerifyDto(phoneNumber = s.phoneNumber.trim(), code = s.otpCode.trim()))
+                client.service.verifyOtp(
+                    auth = "ApiKey ${config.apiKey}",
+                    body = OtpVerifyDto(phoneNumber = s.phoneNumber.trim(), code = s.otpCode.trim()),
+                )
             }
                 .onSuccess { _state.update { it.copy(step = PaywallStep.Confirming) } }
                 .onFailure { e -> _state.update { it.copy(error = e.message ?: "Incorrect OTP") } }
