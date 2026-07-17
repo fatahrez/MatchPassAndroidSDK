@@ -2,6 +2,7 @@ package africa.matchpass.sample
 
 import android.app.Application
 import africa.matchpass.sdk.MatchPassConfig
+import africa.matchpass.sdk.MatchPassEnvironment
 import africa.matchpass.sdk.MatchPassSDK
 
 class SampleApp : Application() {
@@ -11,12 +12,13 @@ class SampleApp : Application() {
             context = this,
             config = MatchPassConfig(
                 apiKey = "6bb774af7ab3181a7cc7f00e2e020d112934ae3de787beb64355ac1dc4740c83",
-                baseUrl = "https://staging.api.b2b.matchpass.africa/api/v1/",
+                environment = MatchPassEnvironment.STAGING,
                 debug = true,
             ),
         )
 //        MatchPassSDK.Builder(this)
 //            .apiKey("6bb774af7ab3181a7cc7f00e2e020d112934ae3de787beb64355ac1dc4740c83")   // from dashboard.matchpass.africa
+//            .environment(MatchPassEnvironment.STAGING)
 //            .debug(true)
 //            .initialize()
     }

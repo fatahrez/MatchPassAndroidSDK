@@ -254,23 +254,19 @@ This works automatically when the user's phone is known (set via `setPhone()` or
 
 ---
 
-## Debug / local development
+## Debug / staging integration
 
 ```kotlin
 MatchPassSDK.Builder(this)
     .apiKey("your-staging-key")
-    .baseUrl("http://10.0.2.2:8000/api/v1/")  // emulator → host machine
+    .environment(MatchPassEnvironment.STAGING)  // no URL to type — the SDK knows the staging host
     .debug(true)                                // enables OkHttp logging
     .initialize()
 ```
 
-In `debug` mode, the OTP code is displayed as a hint on screen — no real SMS is sent to your staging server.
+There's no way to point the SDK at an arbitrary URL — only `STAGING` and `PRODUCTION` (the default) are available, so there's nothing to misconfigure.
 
-Add cleartext traffic permission for local development in `AndroidManifest.xml`:
-
-```xml
-<application android:networkSecurityConfig="@xml/network_security_config">
-```
+When the backend's `demo=true` echo is active, the OTP code is displayed as a hint on screen. Whether an actual SMS/WhatsApp message goes out is controlled server-side by environment, not by this flag — MatchPass's staging and production backends both send for real.
 
 `res/xml/network_security_config.xml`:
 
