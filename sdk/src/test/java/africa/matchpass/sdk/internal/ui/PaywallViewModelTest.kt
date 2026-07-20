@@ -180,6 +180,29 @@ class PaywallViewModelTest {
         assertEquals("restored-tok", capturedGrants[0].token)
     }
 
+    @Test
+    fun `onStart restores a lifetime pass with null expiry from server without crashing`() = runTest {
+        // Regression test: movies/series never expire, so the server sends
+        // expires_at: null. LookupPassDto.expiresAt used to be a non-null
+        // String, which crashed the moment Gson set an actual null into it.
+        every { store.getToken(content.id) } returns null
+        every { store.getPhone() } returns "+27821234567"
+        val dto = africa.matchpass.sdk.internal.LookupPassDto(
+            token = "restored-tok",
+            contentId = content.id,
+            expiresAt = null,
+            valid = true,
+        )
+        coEvery { service.lookupPass(any(), "+27821234567", content.id) } returns dto
+
+        viewModel.onStart()
+        advanceUntilIdle()
+
+        verify { store.savePass(content.id, "restored-tok") }
+        assertEquals(1, capturedGrants.size)
+        assertEquals(null, capturedGrants[0].expiresAt)
+    }
+
     // ── requestOtp ─────────────────────────────────────────────────────────────
 
     @Test

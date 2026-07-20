@@ -30,7 +30,11 @@ internal data class IssuePassDto(
 internal data class PassDto(
     val token: String = "",
     @SerializedName("content_id") val contentId: String = "",
-    @SerializedName("expires_at") val expiresAt: String = "",
+    // Null for lifetime passes (movies/series) — Content.compute_pass_expiry()
+    // returns None for those. Must stay nullable or Gson's reflection-based
+    // construction sets an actual null into this field, tripping Kotlin's
+    // non-null intrinsics check the moment it's read as a non-null String.
+    @SerializedName("expires_at") val expiresAt: String? = null,
     @SerializedName("is_valid") val isValid: Boolean = false,
 ) {
     fun toGrant() = MatchPassGrant(token = token, contentId = contentId, expiresAt = expiresAt)
@@ -60,7 +64,7 @@ internal data class PaymentStatusDto(
 internal data class LookupPassDto(
     val token: String = "",
     @SerializedName("content_id") val contentId: String = "",
-    @SerializedName("expires_at") val expiresAt: String = "",
+    @SerializedName("expires_at") val expiresAt: String? = null,
     val valid: Boolean = false,
 ) {
     fun toGrant() = MatchPassGrant(token = token, contentId = contentId, expiresAt = expiresAt)
@@ -69,6 +73,6 @@ internal data class LookupPassDto(
 internal data class ValidatePassDto(
     @SerializedName("valid") val isValid: Boolean = false,
     val status: String = "",
-    @SerializedName("expires_at") val expiresAt: String = "",
+    @SerializedName("expires_at") val expiresAt: String? = null,
     val reason: String? = null,
 )

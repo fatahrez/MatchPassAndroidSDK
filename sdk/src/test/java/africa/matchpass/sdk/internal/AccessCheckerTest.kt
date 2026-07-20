@@ -128,6 +128,25 @@ class AccessCheckerTest {
         verify { store.saveValidationTime(content.id, any()) }
     }
 
+    // ── Lifetime pass (null expires_at) ──────────────────────────────────────
+    // Movies/series are owned for life — the server sends expires_at: null.
+    // Regression test: previously ValidatePassDto.expiresAt was a non-null
+    // String, so Gson setting an actual null into it crashed here.
+
+    @Test
+    fun `grants access for a lifetime pass with null expiry from server`() = runTest {
+        every { store.getToken(content.id) } returns "tok-lifetime"
+        every { store.getValidationTime(content.id) } returns 0L
+        coEvery { service.validatePass(any(), any()) } returns
+            ValidatePassDto(isValid = true, status = "active", expiresAt = null)
+
+        val result = checker.check(content)
+
+        assertTrue(result is AccessResult.Granted)
+        assertEquals(null, (result as AccessResult.Granted).grant.expiresAt)
+        verify(exactly = 0) { store.saveExpiresAt(content.id, any()) }
+    }
+
     @Test
     fun `saves expiry epoch millis from server response`() = runTest {
         every { store.getToken(content.id) } returns "tok-123"

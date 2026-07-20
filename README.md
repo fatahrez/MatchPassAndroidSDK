@@ -311,7 +311,7 @@ When the backend's `demo=true` echo is active, the OTP code is displayed as a hi
 |---|---|---|
 | `token` | `String` | Present to your streaming backend to authorise playback |
 | `contentId` | `String` | Matches the `id` you passed in `MatchPassContent` |
-| `expiresAt` | `String` | ISO 8601 expiry timestamp |
+| `expiresAt` | `String?` | ISO 8601 expiry timestamp, or `null` for a lifetime pass (movies/series) that never expires |
 
 ---
 

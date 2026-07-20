@@ -221,7 +221,7 @@ internal class PaywallViewModel(
                         store.saveValidationTime(content.id, System.currentTimeMillis())
                         statusDto.expiresAt?.let { AccessChecker.parseIso8601ToMillis(it) }
                             ?.let { store.saveExpiresAt(content.id, it) }
-                        val grant = africa.matchpass.sdk.MatchPassGrant(token, content.id, statusDto.expiresAt ?: "")
+                        val grant = africa.matchpass.sdk.MatchPassGrant(token, content.id, statusDto.expiresAt)
                         _state.update { it.copy(step = PaywallStep.AccessGranted, issuedGrant = grant) }
                         return@launch
                     }

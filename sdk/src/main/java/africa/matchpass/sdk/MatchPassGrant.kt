@@ -8,5 +8,6 @@ package africa.matchpass.sdk
 data class MatchPassGrant(
     val token: String,
     val contentId: String,
-    val expiresAt: String,
+    /** ISO 8601 expiry timestamp, or null for a lifetime pass (movies/series) that never expires. */
+    val expiresAt: String?,
 )

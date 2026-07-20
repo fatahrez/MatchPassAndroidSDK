@@ -42,7 +42,7 @@ internal class AccessChecker(
         val cacheTtlMs = content.policy.cacheTtlSeconds * 1_000L
         val lastValidated = store.getValidationTime(content.id)
         if (lastValidated > 0L && System.currentTimeMillis() - lastValidated < cacheTtlMs) {
-            val expiresAtStr = if (storedExpiry > 0L) epochMillisToIso8601(storedExpiry) else ""
+            val expiresAtStr = if (storedExpiry > 0L) epochMillisToIso8601(storedExpiry) else null
             return AccessResult.Granted(
                 MatchPassGrant(token = token, contentId = content.id, expiresAt = expiresAtStr)
             )
@@ -60,7 +60,7 @@ internal class AccessChecker(
                 store.clearPass(content.id)
                 when (dto.status) {
                     "revoked" -> AccessResult.Error(MatchPassException.PassRevoked())
-                    else      -> AccessResult.Expired(dto.expiresAt)
+                    else      -> AccessResult.Expired(dto.expiresAt ?: "")
                 }
             }
         } catch (e: IOException) {
@@ -80,8 +80,8 @@ internal class AccessChecker(
                 .also { it.timeZone = TimeZone.getTimeZone("UTC") }
                 .format(Date(epochMillis))
 
-        internal fun parseIso8601ToMillis(dateStr: String): Long? {
-            if (dateStr.isBlank()) return null
+        internal fun parseIso8601ToMillis(dateStr: String?): Long? {
+            if (dateStr.isNullOrBlank()) return null
             // DRF emits microseconds (6 digits after dot). SimpleDateFormat only handles millis (3).
             val normalized = dateStr.replace(Regex("\\.(\\d{3})\\d+Z$"), ".$1Z")
             val formats = listOf(
