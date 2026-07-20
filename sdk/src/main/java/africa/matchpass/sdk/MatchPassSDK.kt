@@ -256,6 +256,21 @@ object MatchPassSDK {
             MatchPassContent(id = contentId, title = "", price = "0"),
         ) is AccessResult.Granted
 
+    /**
+     * Returns everything the signed-in user currently has an active pass for.
+     *
+     * Requires a stored phone (see [getStoredPhone]) — returns an empty list if the user
+     * has never logged in on this device, rather than throwing.
+     *
+     * Hits the server on every call (no local caching) — call it once per screen load,
+     * not per item. Pages through the full result set internally.
+     */
+    suspend fun getMyPasses(context: Context): List<MatchPassOwnedItem> {
+        checkInitialised()
+        val userRef = getStoredPhone(context) ?: return emptyList()
+        return africa.matchpass.sdk.internal.fetchAllOwnedPasses(client.service, config.apiKey, userRef)
+    }
+
     // ── Internal ─────────────────────────────────────────────────────────────
 
     private fun checkInitialised() {

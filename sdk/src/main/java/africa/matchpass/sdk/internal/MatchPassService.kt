@@ -56,4 +56,12 @@ internal interface MatchPassService {
         @Query("user_ref") userRef: String,
         @Query("content_id") contentId: String,
     ): LookupPassDto
+
+    @GET("passes/")
+    suspend fun listPasses(
+        @Header("Authorization") auth: String,
+        @Query("user_ref") userRef: String,
+        @Query("status") status: String? = "active",
+        @Query("page") page: Int = 1,
+    ): PassListResponseDto
 }

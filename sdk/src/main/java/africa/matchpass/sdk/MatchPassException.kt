@@ -44,11 +44,12 @@ sealed class MatchPassException(message: String, cause: Throwable? = null) :
 
     /** A network call failed. Check [cause] for the underlying IOException. */
     class NetworkError(cause: Throwable) :
-        MatchPassException("Network error: ${cause.message}", cause)
+        MatchPassException(africa.matchpass.sdk.internal.networkFailureMessage(), cause)
 
-    /** The server returned an unexpected HTTP error. */
-    class ServerError(val code: Int, body: String) :
-        MatchPassException("Server error $code: $body")
+    /** The server returned an unexpected HTTP error. [rawBody] is kept for logging only —
+     * never shown to the user, [message] is already a plain-language equivalent. */
+    class ServerError(val code: Int, val rawBody: String) :
+        MatchPassException(africa.matchpass.sdk.internal.httpStatusToFriendlyMessage(code))
 
     /** The SDK was not configured correctly. See [message] for details. */
     class ConfigurationError(message: String) :

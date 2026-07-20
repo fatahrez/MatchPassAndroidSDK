@@ -76,3 +76,30 @@ internal data class ValidatePassDto(
     @SerializedName("expires_at") val expiresAt: String? = null,
     val reason: String? = null,
 )
+
+internal data class PassSummaryDto(
+    @SerializedName("content_id")    val contentId: String = "",
+    @SerializedName("content_title") val contentTitle: String = "",
+    @SerializedName("content_type")  val contentType: String = "",
+    val status: String = "",
+    val amount: String = "",
+    val currency: String = "",
+    @SerializedName("issued_at")     val issuedAt: String = "",
+    @SerializedName("expires_at")    val expiresAt: String? = null,
+) {
+    fun toOwnedItem() = africa.matchpass.sdk.MatchPassOwnedItem(
+        contentId = contentId,
+        title = contentTitle,
+        contentType = contentType,
+        amount = amount,
+        currency = currency,
+        issuedAt = issuedAt,
+        expiresAt = expiresAt,
+    )
+}
+
+internal data class PassListResponseDto(
+    val count: Int = 0,
+    val next: String? = null,
+    val results: List<PassSummaryDto> = emptyList(),
+)

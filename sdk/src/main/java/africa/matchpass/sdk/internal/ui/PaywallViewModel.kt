@@ -15,6 +15,7 @@ import africa.matchpass.sdk.internal.MatchPassClient
 import africa.matchpass.sdk.internal.MatchPassStore
 import africa.matchpass.sdk.internal.OtpRequestDto
 import africa.matchpass.sdk.internal.OtpVerifyDto
+import africa.matchpass.sdk.internal.toFriendlyMessage
 import retrofit2.HttpException
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -159,7 +160,7 @@ internal class PaywallViewModel(
                     }
                 }
                 .onFailure { e ->
-                    _state.update { it.copy(isLoading = false, error = e.message) }
+                    _state.update { it.copy(isLoading = false, error = e.toFriendlyMessage()) }
                 }
         }
     }
@@ -175,7 +176,16 @@ internal class PaywallViewModel(
                 )
             }
                 .onSuccess { _state.update { it.copy(step = PaywallStep.Confirming) } }
-                .onFailure { e -> _state.update { it.copy(error = e.message ?: "Incorrect OTP") } }
+                .onFailure { e ->
+                    // A 400 here almost always means the code was wrong or expired —
+                    // more specific than the generic mapper's message for this call site.
+                    val message = if ((e as? HttpException)?.code() == 400) {
+                        "The OTP code is incorrect or has expired. Please check and try again."
+                    } else {
+                        e.toFriendlyMessage()
+                    }
+                    _state.update { it.copy(error = message) }
+                }
         }
     }
 
@@ -202,7 +212,7 @@ internal class PaywallViewModel(
                     ),
                 )
             }.getOrElse { e ->
-                _state.update { it.copy(step = PaywallStep.Confirming, error = "Could not send payment request: ${e.message}") }
+                _state.update { it.copy(step = PaywallStep.Confirming, error = "Could not send payment request. ${e.toFriendlyMessage()}") }
                 return@launch
             }
 

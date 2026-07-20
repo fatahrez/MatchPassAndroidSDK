@@ -291,6 +291,8 @@ When the backend's `demo=true` echo is active, the OTP code is displayed as a hi
 | `Paywall(...)` | `Unit` *(Composable)* | Show the purchase flow. |
 | `Login(...)` | `Unit` *(Composable)* | Standalone phone OTP login screen. |
 | `checkAccess(context, content)` | `AccessResult` | Validate access without UI. Suspend function. |
+| `hasAccess(context, contentId)` | `Boolean` | Convenience wrapper around `checkAccess`. Suspend function. |
+| `getMyPasses(context)` | `List<MatchPassOwnedItem>` | Everything the signed-in user currently has an active pass for. Suspend function; empty list if not logged in. |
 | `setPhone(context, phone)` | `Unit` | Pre-set a verified phone (from your own auth). |
 | `getStoredPhone(context)` | `String?` | Read the verified phone stored on device. |
 | `signOut(context)` | `Unit` | Clear the session. |
@@ -312,6 +314,18 @@ When the backend's `demo=true` echo is active, the OTP code is displayed as a hi
 | `token` | `String` | Present to your streaming backend to authorise playback |
 | `contentId` | `String` | Matches the `id` you passed in `MatchPassContent` |
 | `expiresAt` | `String?` | ISO 8601 expiry timestamp, or `null` for a lifetime pass (movies/series) that never expires |
+
+### `MatchPassOwnedItem`
+
+| Field | Type | Description |
+|---|---|---|
+| `contentId` | `String` | Matches the `id` you passed in `MatchPassContent` |
+| `title` | `String` | Content title, as registered with MatchPass |
+| `contentType` | `String` | e.g. `movie`, `match`, `series_season` |
+| `amount` | `String` | What was paid |
+| `currency` | `String` | e.g. `KES` |
+| `issuedAt` | `String` | ISO 8601 timestamp the pass was issued |
+| `expiresAt` | `String?` | ISO 8601 expiry timestamp, or `null` for a lifetime pass |
 
 ---
 
