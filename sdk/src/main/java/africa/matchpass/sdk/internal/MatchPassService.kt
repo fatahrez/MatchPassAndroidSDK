@@ -15,6 +15,12 @@ internal interface MatchPassService {
         @Body body: OtpRequestDto,
     ): OtpResponseDto
 
+    /** Which OTP channels this operator has enabled, and which is the default. */
+    @GET("guests/otp/channels/")
+    suspend fun otpChannels(
+        @Header("Authorization") auth: String,
+    ): OtpChannelsDto
+
     @POST("guests/otp/verify/")
     suspend fun verifyOtp(
         @Header("Authorization") auth: String,

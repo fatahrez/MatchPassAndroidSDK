@@ -3,11 +3,22 @@ package africa.matchpass.sdk.internal
 import com.google.gson.annotations.SerializedName
 import africa.matchpass.sdk.MatchPassGrant
 
-internal data class OtpRequestDto(@SerializedName("phone_number") val phoneNumber: String)
+internal data class OtpRequestDto(
+    @SerializedName("phone_number") val phoneNumber: String,
+    // Omit to let the backend use the operator's default channel. Must be
+    // one of the values returned by OtpChannelsDto.channels for this
+    // operator, or the request is rejected with a 400.
+    val channel: String? = null,
+)
 
 internal data class OtpResponseDto(
     val message: String = "",
     val otp: String = "",
+)
+
+internal data class OtpChannelsDto(
+    val channels: List<String> = listOf("whatsapp"),
+    val default: String = "whatsapp",
 )
 
 internal data class OtpVerifyDto(

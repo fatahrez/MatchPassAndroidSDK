@@ -124,6 +124,7 @@ internal fun PaywallScreen(
                     onPhoneChange = vm::setPhone,
                     onRequestOtp = vm::requestOtp,
                     onDismiss = onDismiss,
+                    onSelectChannel = vm::selectChannel,
                 )
             }
         }

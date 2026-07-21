@@ -82,6 +82,7 @@ internal fun LoginScreen(
                     onPhoneChange = vm::setPhone,
                     onRequestOtp = vm::requestOtp,
                     onSkip = onSkip,
+                    onSelectChannel = vm::selectChannel,
                 )
                 LoginViewModel.Step.Otp -> OtpLoginStep(
                     state = state,
@@ -102,6 +103,7 @@ private fun PhoneLoginStep(
     onPhoneChange: (String) -> Unit,
     onRequestOtp: () -> Unit,
     onSkip: () -> Unit,
+    onSelectChannel: (String) -> Unit = {},
 ) {
     val colors = LocalMatchPassColors.current
     // Capped and centered rather than a bare fillMaxSize() column: on a
@@ -170,6 +172,16 @@ private fun PhoneLoginStep(
         state.error?.let {
             Spacer(Modifier.height(6.dp))
             Text(it, color = colors.error, fontSize = 12.sp)
+        }
+        // A single enabled channel (the common case) renders nothing here —
+        // this only appears once the operator has ticked more than one.
+        if (state.availableChannels.size > 1) {
+            Spacer(Modifier.height(16.dp))
+            OtpChannelPicker(
+                channels = state.availableChannels,
+                selected = state.selectedChannel,
+                onSelect = onSelectChannel,
+            )
         }
         Spacer(Modifier.height(16.dp))
         Button(

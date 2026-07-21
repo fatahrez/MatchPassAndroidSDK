@@ -21,6 +21,9 @@ internal data class PaywallState(
     val editingPaymentPhone: String = "", // transient while in ChangingPaymentPhone step
     val otpCode: String = "",
     val demoOtp: String? = null,
+    // See LoginViewModel.State — same init-time lookup, same picker gating.
+    val availableChannels: List<String> = listOf("whatsapp"),
+    val selectedChannel: String? = null,
     val error: String? = null,
     val isLoading: Boolean = false,
     val issuedGrant: MatchPassGrant? = null,

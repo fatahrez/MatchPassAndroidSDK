@@ -40,8 +40,22 @@ internal class PaywallViewModel(
     )
     val state: StateFlow<PaywallState> = _state.asStateFlow()
 
+    init {
+        // Runs in parallel with whatever step onStart() lands on — a wasted
+        // call on flows that skip OTP entirely (existing pass / known phone),
+        // but cheap enough not to bother gating, and it's ready with no
+        // added latency on the flows that do need it.
+        viewModelScope.launch {
+            runCatching { client.service.otpChannels(auth = "ApiKey ${config.apiKey}") }
+                .onSuccess { res ->
+                    _state.update { it.copy(availableChannels = res.channels, selectedChannel = res.default) }
+                }
+        }
+    }
+
     fun setPhone(value: String) = _state.update { it.copy(phoneNumber = value, error = null) }
     fun setOtp(value: String) = _state.update { it.copy(otpCode = value, error = null) }
+    fun selectChannel(channel: String) = _state.update { it.copy(selectedChannel = channel) }
 
     // ── Payment phone (no OTP — just changes the M-Pesa target) ─────────────
     fun changePaymentPhone() = _state.update {
@@ -150,10 +164,13 @@ internal class PaywallViewModel(
 
     fun requestOtp() {
         val phone = _state.value.phoneNumber.trim().ifBlank { return }
+        val channel = _state.value.selectedChannel
         store.savePhone(phone)
         viewModelScope.launch {
             _state.update { it.copy(error = null, isLoading = true) }
-            runCatching { client.service.requestOtp(auth = "ApiKey ${config.apiKey}", body = OtpRequestDto(phone)) }
+            runCatching {
+                client.service.requestOtp(auth = "ApiKey ${config.apiKey}", body = OtpRequestDto(phone, channel))
+            }
                 .onSuccess { res ->
                     _state.update {
                         it.copy(step = PaywallStep.AwaitingOtp, isLoading = false, demoOtp = res.otp.ifBlank { null })

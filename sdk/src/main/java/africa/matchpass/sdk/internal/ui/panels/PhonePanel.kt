@@ -25,6 +25,7 @@ import androidx.compose.ui.unit.sp
 import africa.matchpass.sdk.MatchPassContent
 import africa.matchpass.sdk.internal.ui.PaywallState
 import africa.matchpass.sdk.internal.ui.LocalMatchPassColors
+import africa.matchpass.sdk.internal.ui.OtpChannelPicker
 import africa.matchpass.sdk.internal.ui.PhoneNumberField
 
 @Composable
@@ -34,6 +35,7 @@ internal fun PhonePanel(
     onPhoneChange: (String) -> Unit,
     onRequestOtp: () -> Unit,
     onDismiss: () -> Unit,
+    onSelectChannel: (String) -> Unit = {},
 ) {
     val colors = LocalMatchPassColors.current
     OverlayCard {
@@ -62,6 +64,14 @@ internal fun PhonePanel(
             modifier = Modifier.fillMaxWidth(),
         )
         state.error?.let { Text(text = it, color = colors.error, fontSize = 12.sp, modifier = Modifier.padding(top = 6.dp)) }
+        if (state.availableChannels.size > 1) {
+            Spacer(Modifier.height(12.dp))
+            OtpChannelPicker(
+                channels = state.availableChannels,
+                selected = state.selectedChannel,
+                onSelect = onSelectChannel,
+            )
+        }
         Spacer(Modifier.height(16.dp))
         Button(
             onClick = onRequestOtp,
