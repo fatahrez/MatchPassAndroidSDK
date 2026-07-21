@@ -40,6 +40,9 @@ internal fun OtpPanel(
         Text(text = "Enter the OTP sent to", color = colors.textSecondary, fontSize = 13.sp)
         Text(text = state.phoneNumber, color = colors.text, fontSize = 16.sp, fontWeight = FontWeight.Bold)
 
+        // Populated either by ?demo=true (testing) or by an operator on the
+        // on_screen OTP channel (no external delivery — the code only ever
+        // reaches the user this way), so the label stays generic.
         state.demoOtp?.let { otp ->
             Spacer(Modifier.height(10.dp))
             Row(
@@ -51,7 +54,7 @@ internal fun OtpPanel(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Text(text = "Demo OTP", color = colors.textSecondary, fontSize = 11.sp)
+                Text(text = "Your code", color = colors.textSecondary, fontSize = 11.sp)
                 Text(text = otp, color = colors.accent, fontSize = 18.sp, fontWeight = FontWeight.Black)
             }
         }

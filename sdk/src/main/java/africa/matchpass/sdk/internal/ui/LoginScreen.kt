@@ -232,7 +232,9 @@ private fun OtpLoginStep(
                 fontSize = 14.sp,
             )
 
-            // Demo OTP hint card
+            // Populated either by ?demo=true (testing) or by an operator on the
+            // on_screen OTP channel (no external delivery — the code only ever
+            // reaches the user this way), so the label stays generic.
             state.demoOtp?.let { otp ->
                 Spacer(Modifier.height(16.dp))
                 Row(
@@ -244,7 +246,7 @@ private fun OtpLoginStep(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Text("Demo code", color = colors.accent, fontSize = 12.sp)
+                    Text("Your code", color = colors.accent, fontSize = 12.sp)
                     Text(otp, color = colors.accent, fontSize = 22.sp, fontWeight = FontWeight.Black)
                 }
             }

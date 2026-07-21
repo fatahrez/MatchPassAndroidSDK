@@ -268,6 +268,8 @@ There's no way to point the SDK at an arbitrary URL — only `STAGING` and `PROD
 
 When the backend's `demo=true` echo is active, the OTP code is displayed as a hint on screen. Whether an actual SMS/WhatsApp message goes out is controlled server-side by environment, not by this flag — MatchPass's staging and production backends both send for real.
 
+An operator can also be configured server-side on the `on_screen` OTP channel (dashboard → Messaging), which always echoes the code the same way `demo=true` does — no SMS/WhatsApp is sent at all. This is meant as a temporary fallback for an operator whose WhatsApp/SMS delivery isn't working yet, not a production delivery method.
+
 `res/xml/network_security_config.xml`:
 
 ```xml
