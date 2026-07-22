@@ -5,6 +5,7 @@ package africa.matchpass.sdk
  *
  * The platform enforces pricing rules per category:
  *  - [SPORTS]        Fixed price (KES 50). Set your content price to this value.
+ *  - [COMEDY]        Open pricing — livestream tickets and season passes both apply.
  *  - [ENTERTAINMENT] Price range (KES 200–300). Set within these bounds.
  *  - [EDUCATION]     Open pricing. Consult with MatchPass for guidance.
  *  - [BROADCASTING]  Open pricing. Consult with MatchPass for guidance.
@@ -15,7 +16,11 @@ enum class ContentCategory {
     /** Live sports, matches, tournaments, boxing, MMA. */
     SPORTS,
 
-    /** Films, comedy specials, creator PPV, music concerts, live entertainment. */
+    /** Stand-up specials and recurring comedy shows — sold as a single
+     * livestream ticket or as a season pass covering every episode. */
+    COMEDY,
+
+    /** Films, creator PPV, music concerts, live entertainment. */
     ENTERTAINMENT,
 
     /** Graduation ceremonies, lectures, campus events, university streams. */
