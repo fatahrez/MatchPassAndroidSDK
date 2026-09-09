@@ -9,6 +9,7 @@ import africa.matchpass.sdk.internal.MatchPassClient
 import africa.matchpass.sdk.internal.MatchPassStore
 import africa.matchpass.sdk.internal.OtpRequestDto
 import africa.matchpass.sdk.internal.OtpVerifyDto
+import africa.matchpass.sdk.internal.toFriendlyMessage
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -72,7 +73,7 @@ internal class LoginViewModel(
                     }
                 }
                 .onFailure { e ->
-                    _state.update { it.copy(isLoading = false, error = e.message) }
+                    _state.update { it.copy(isLoading = false, error = e.toFriendlyMessage()) }
                 }
         }
     }
@@ -92,7 +93,12 @@ internal class LoginViewModel(
                     onLoggedIn(s.phone.trim())
                 }
                 .onFailure { e ->
-                    _state.update { it.copy(isLoading = false, error = e.message ?: "Incorrect OTP") }
+                    val message = if (e is retrofit2.HttpException && e.code() == 400) {
+                        "The OTP code is incorrect or has expired. Please check and try again."
+                    } else {
+                        e.toFriendlyMessage()
+                    }
+                    _state.update { it.copy(isLoading = false, error = message) }
                 }
         }
     }

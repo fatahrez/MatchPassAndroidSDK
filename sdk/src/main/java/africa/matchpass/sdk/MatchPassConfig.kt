@@ -5,6 +5,9 @@ package africa.matchpass.sdk
  * type a URL yourself.
  */
 enum class MatchPassEnvironment {
+    /** Local Docker-backed MatchPassAPI. Use only for emulator development. */
+    LOCAL,
+
     /** MatchPass's staging backend. Use this while integrating/testing. */
     STAGING,
 
@@ -33,6 +36,7 @@ data class MatchPassConfig(
 ) {
     internal val baseUrl: String
         get() = when (environment) {
+            MatchPassEnvironment.LOCAL -> "http://10.0.2.2:8001/api/v1/"
             MatchPassEnvironment.STAGING -> "https://staging.api.b2b.matchpass.africa/api/v1/"
             MatchPassEnvironment.PRODUCTION -> "https://api.matchpass.africa/api/v1/"
         }
