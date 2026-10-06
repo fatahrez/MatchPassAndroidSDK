@@ -261,7 +261,7 @@ internal class PaywallViewModel(
             }
 
             // 90 seconds elapsed with no result
-            _state.update { it.copy(step = PaywallStep.Confirming, error = "Payment timed out. Please try again.") }
+            _state.update { it.copy(step = PaywallStep.Confirming, error = "We could not confirm this payment yet. Check your M-Pesa message before trying again.") }
         }
     }
 
