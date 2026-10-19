@@ -24,8 +24,9 @@ android {
 }
 
 dependencies {
-//    implementation(project(":sdk"))
-    implementation(libs.matchpassandroidsdk)
+    // Compile the sample against this checkout so it validates changes before
+    // a new SDK version is published to JitPack.
+    implementation(project(":sdk"))
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.compose.ui)
     implementation(libs.androidx.compose.material3)
