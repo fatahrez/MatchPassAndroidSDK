@@ -179,6 +179,12 @@ object MatchPassSDK {
         return MatchPassStore(context).getPhone().ifBlank { null }
     }
 
+    /** OTP session proof for exchange with the host app's trusted backend. */
+    fun getVerifiedSessionToken(context: Context): String? {
+        checkInitialised()
+        return MatchPassStore(context).getSessionToken()
+    }
+
     /**
      * Clears the stored phone number, ending the verified session on this device.
      *

@@ -86,11 +86,11 @@ internal class LoginViewModel(
                 client.service.verifyOtp(
                     auth = "ApiKey ${config.apiKey}",
                     body = OtpVerifyDto(phoneNumber = s.phone.trim(), code = s.otp.trim()),
-                )
+                ).also { require(it.sessionToken.isNotBlank() && it.userRef.isNotBlank()) }
             }
-                .onSuccess {
-                    store.savePhone(s.phone.trim())
-                    onLoggedIn(s.phone.trim())
+                .onSuccess { session ->
+                    store.saveVerifiedSession(session.userRef, session.sessionToken)
+                    onLoggedIn(session.userRef)
                 }
                 .onFailure { e ->
                     val message = if (e is retrofit2.HttpException && e.code() == 400) {

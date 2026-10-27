@@ -165,7 +165,6 @@ internal class PaywallViewModel(
     fun requestOtp() {
         val phone = _state.value.phoneNumber.trim().ifBlank { return }
         val channel = _state.value.selectedChannel
-        store.savePhone(phone)
         viewModelScope.launch {
             _state.update { it.copy(error = null, isLoading = true) }
             runCatching {
@@ -190,9 +189,12 @@ internal class PaywallViewModel(
                 client.service.verifyOtp(
                     auth = "ApiKey ${config.apiKey}",
                     body = OtpVerifyDto(phoneNumber = s.phoneNumber.trim(), code = s.otpCode.trim()),
-                )
+                ).also { require(it.sessionToken.isNotBlank() && it.userRef.isNotBlank()) }
             }
-                .onSuccess { _state.update { it.copy(step = PaywallStep.Confirming) } }
+                .onSuccess { session ->
+                    store.saveVerifiedSession(session.userRef, session.sessionToken)
+                    _state.update { it.copy(step = PaywallStep.Confirming) }
+                }
                 .onFailure { e ->
                     // A 400 here almost always means the code was wrong or expired —
                     // more specific than the generic mapper's message for this call site.

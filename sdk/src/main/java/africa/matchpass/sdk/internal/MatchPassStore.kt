@@ -34,12 +34,23 @@ internal class MatchPassStore(private val prefs: SharedPreferences) {
     fun getValidationTime(contentId: String): Long =
         prefs.getLong("validated_at_$contentId", 0L)
 
-    fun savePhone(phone: String) =
-        prefs.edit().putString("last_phone", phone).apply()
+    fun savePhone(phone: String) {
+        val editor = prefs.edit()
+        if (getPhone().isNotBlank() && getPhone() != phone) editor.remove("guest_session_token")
+        editor.putString("last_phone", phone).apply()
+    }
+
+    fun saveVerifiedSession(phone: String, token: String) {
+        require(token.isNotBlank()) { "Verified session token is required" }
+        savePhone(phone)
+        prefs.edit().putString("guest_session_token", token).apply()
+    }
+
+    fun getSessionToken(): String? = prefs.getString("guest_session_token", null)
 
     fun getPhone(): String =
         prefs.getString("last_phone", "") ?: ""
 
     fun clearPhone() =
-        prefs.edit().remove("last_phone").apply()
+        prefs.edit().remove("last_phone").remove("guest_session_token").apply()
 }
