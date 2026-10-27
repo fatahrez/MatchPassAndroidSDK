@@ -107,4 +107,40 @@ class MatchPassStoreTest {
         store.savePhone("+27821234567")
         assertEquals("+27821234567", store.getPhone())
     }
+
+    @Test
+    fun `saveVerifiedSession stores phone and token`() {
+        store.saveVerifiedSession("+254700000001", "verified-session")
+
+        assertEquals("+254700000001", store.getPhone())
+        assertEquals("verified-session", store.getSessionToken())
+    }
+
+    @Test
+    fun `changing phone clears verified session token`() {
+        store.saveVerifiedSession("+254700000001", "verified-session")
+
+        store.savePhone("+254700000002")
+
+        assertNull(store.getSessionToken())
+    }
+
+    @Test
+    fun `saving same phone preserves verified session token`() {
+        store.saveVerifiedSession("+254700000001", "verified-session")
+
+        store.savePhone("+254700000001")
+
+        assertEquals("verified-session", store.getSessionToken())
+    }
+
+    @Test
+    fun `clearPhone clears phone and verified session token`() {
+        store.saveVerifiedSession("+254700000001", "verified-session")
+
+        store.clearPhone()
+
+        assertEquals("", store.getPhone())
+        assertNull(store.getSessionToken())
+    }
 }

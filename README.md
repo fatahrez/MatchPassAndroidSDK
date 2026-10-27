@@ -64,7 +64,7 @@ dependencyResolutionManagement {
 
 ```kotlin
 dependencies {
-    implementation("com.github.fatahrez:MatchPassAndroidSDK:1.0.0-beta06")
+    implementation("com.github.fatahrez:MatchPassAndroidSDK:1.0.0")
 }
 ```
   
@@ -190,6 +190,9 @@ MatchPassSDK.setPhone(context, verifiedPhone)
 // Returns the verified phone stored on this device, or null if not logged in
 val phone: String? = MatchPassSDK.getStoredPhone(context)
 
+// Opaque proof produced by MatchPass OTP verification, for exchange with your backend
+val verifiedSessionToken: String? = MatchPassSDK.getVerifiedSessionToken(context)
+
 // Clear the session — does NOT revoke passes
 MatchPassSDK.signOut(context)
 
@@ -297,6 +300,7 @@ An operator can also be configured server-side on the `on_screen` OTP channel (d
 | `getMyPasses(context)` | `List<MatchPassOwnedItem>` | Everything the signed-in user currently has an active pass for. Suspend function; empty list if not logged in. |
 | `setPhone(context, phone)` | `Unit` | Pre-set a verified phone (from your own auth). |
 | `getStoredPhone(context)` | `String?` | Read the verified phone stored on device. |
+| `getVerifiedSessionToken(context)` | `String?` | Read the opaque token issued by successful MatchPass OTP verification. |
 | `signOut(context)` | `Unit` | Clear the session. |
 | `getExpiresAt(context, contentId)` | `Long?` | Epoch-ms expiry for a content pass. |
 
@@ -336,8 +340,8 @@ An operator can also be configured server-side on the `on_screen` OTP channel (d
 Tag a release and push — JitPack builds on first request:
 
 ```bash
-git tag 1.0.0-beta01
-git push origin 1.0.0-beta01
+git tag 1.0.0
+git push origin 1.0.0
 ```
 
 Then open `https://jitpack.io/#YOUR_USERNAME/MatchPassAndroidSDK` and click **Get it** to pre-build.
