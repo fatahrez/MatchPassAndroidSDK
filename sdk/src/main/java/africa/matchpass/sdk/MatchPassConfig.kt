@@ -33,7 +33,12 @@ data class MatchPassConfig(
     val environment: MatchPassEnvironment = MatchPassEnvironment.PRODUCTION,
     val debug: Boolean = false,
     val colors: MatchPassColors? = null,
+    val errorReporter: (Throwable) -> Unit = {},
 ) {
+    internal fun reportError(error: Throwable) {
+        runCatching { errorReporter(error) }
+    }
+
     internal val baseUrl: String
         get() = when (environment) {
             MatchPassEnvironment.LOCAL -> "http://10.0.2.2:8001/api/v1/"
