@@ -73,6 +73,7 @@ internal class LoginViewModel(
                     }
                 }
                 .onFailure { e ->
+                    config.reportError(e)
                     _state.update { it.copy(isLoading = false, error = e.toFriendlyMessage()) }
                 }
         }
@@ -93,6 +94,9 @@ internal class LoginViewModel(
                     onLoggedIn(session.userRef)
                 }
                 .onFailure { e ->
+                    if ((e as? retrofit2.HttpException)?.code() != 400) {
+                        config.reportError(e)
+                    }
                     val message = if (e is retrofit2.HttpException && e.code() == 400) {
                         "The OTP code is incorrect or has expired. Please check and try again."
                     } else {

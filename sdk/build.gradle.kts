@@ -46,7 +46,7 @@ publishing {
         create<MavenPublication>("release") {
             groupId = "com.github.fatahrez"
             artifactId = "MatchPassAndroidSDK"
-            version = "1.0.1"
+            version = "1.0.2"
             afterEvaluate {
                 from(components["release"])
             }

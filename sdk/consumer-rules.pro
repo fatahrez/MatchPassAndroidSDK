@@ -15,9 +15,7 @@
 -keep class africa.matchpass.sdk.MatchPassException$* { *; }
 
 # Gson DTOs — serialized field names must not be renamed
--keepclassmembers,allowoptimization class africa.matchpass.sdk.internal.**Dto {
-    <fields>;
-}
+-keep class africa.matchpass.sdk.internal.**Dto { *; }
 
 # Retrofit — keep service interface method signatures
 -keep interface africa.matchpass.sdk.internal.MatchPassService { *; }
